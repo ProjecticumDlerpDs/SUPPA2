@@ -1,0 +1,22 @@
+---
+title: "seurat"
+author: "Jalisa van der Zeeuw"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Normaliseren: SCTransform is vooral beter als je data complexer is, met variabele sequencing depth, veel lage expressiewaarden en technische variatie — precies het geval bij VASA-seq. Daarom zie je in moderne pipelines dat SCTransform de voorkeur krijgt.
+
+HVG = 3000: In embryonale datasets is de celdiversiteit doorgaans hoger vanwege de aanwezigheid van diverse celtypes en ontwikkelingsstadia. Dit zorgt voor complexere en subtielere veranderingen in genexpressiepatronen. Door meer variabele genen te selecteren (3000 in plaats van de gebruikelijke 2000) kunnen we deze biologische diversiteit van embryonale ontwikkeling beter vastleggen. Bovendien helpt een grotere genenset om zwakkere signalen op te vangen en verbetert het de detectie van fijne celtypen en subpopulaties.
+
+Na het toepassen van SCTransform() is automatisch een selectie gemaakt van de meest variabele genen binnen de dataset. Dit zijn genen waarvan de expressie sterk verschilt tussen cellen, en ze zijn belangrijk omdat ze vaak bijdragen aan het onderscheiden van celtypes in latere analyses (zoals clustering of trajectanalyse).
+Om te controleren of deze selectie biologisch logisch is — en niet alleen technische ruis bevat — heb ik de top 10 meest variabele genen bekeken. Deze controle geeft inzicht in welke genen de meeste bijdrage leveren aan de variatie tussen cellen in de dataset.
+De topgenen bevatten onder andere:
+- Hemoglobinegenen (Hbb-bh1, Hbb-y, Hba-x): typisch actief in vroege rode bloedcellen in het embryo
+- Spier- en hartgerelateerde genen (Ttn, Myh6, Actc1, Ryr2): betrokken bij hartontwikkeling, wat past bij cellen in deze embryonale fase
+- Genen betrokken bij transport en metabolisme (zoals Apob, Cubn, Slc8a1): kunnen wijzen op actieve cellen met functies in vet- of iontransport
