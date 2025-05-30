@@ -403,7 +403,7 @@ library(dplyr)
 library(patchwork)
 
 # Inladen dataset
-pbmc.data &lt;- Read10X(data.dir = &quot;~/Desktop/Desktop - Jalisa/Rstudio/suppa2/seurat/data/filtered_gene_bc_matrices/hg19&quot;)
+pbmc.data &lt;- Read10X(data.dir = &quot;~/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/data_tutorial/filtered_gene_bc_matrices/hg19&quot;)
 
 # Aanmaken van Seurat-Object met ruwe data
 pbmc &lt;- CreateSeuratObject(counts = pbmc.data, project = &quot;pbmc3k&quot;, min.cells = 3, min.features = 200)</code></pre>
