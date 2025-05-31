@@ -9,6 +9,181 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Inleiding
+test
+
+## Doel
+test
+
+## Stappen van de worflow
+test
+
+
+```{r load_packages, message=FALSE, warning=FALSE}
+# Inladen van benodigde packages
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(Seurat)
+library(Matrix)
+```
+
+```{r load_metadata}
+features_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz")
+samples_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv")
+
+```
+
+```{r load_Mtx}
+counts <- ReadMtx(
+  mtx = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/e85_count_matrix.mtx.gz",                 
+  features = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz",          
+  cells = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv",
+  feature.sep = ",",
+  feature.column = 1,
+  cell.sep = ",",
+  cell.column = 3,
+  skip.cell = 1,
+  skip.feature = 1
+)
+
+```
+
+```{r create_seurat_object}
+# Aanmaken Seurat object met ruwe data
+seurat <- CreateSeuratObject(counts = counts,
+                             project = "mouse_embryo",
+                             min.cells = 3,
+                             min.features = 200)
+
+# Bekijk samenvatting en check of de eerste paar rijen kloppen
+seurat
+head(seurat)
+```
+
+```{r calculate_percent_mt}
+# Bereken percentage mitochondriale genen
+mito.features <- grep("^mt-", rownames(seurat), value = TRUE, ignore.case = TRUE)
+seurat[["percent.mt"]] <- PercentageFeatureSet(seurat, features = mito.features)
+```
+
+```{r qc_vlnplot}
+# Quality Control plots voor features, counts en percent.mt
+VlnPlot(seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+        layer = "counts",
+        ncol = 3)
+```
+
+```{r qc_scatterplots}
+# QC scatterplots
+plot1 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 + plot2
+```
+
+```{r qc_filtering_subset}
+# QC filtering, subset van de data
+seurat.filtered <- subset(seurat, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 6)
+```
+
+```{r normalization_and_scaling}
+# Normalisatie, selectie variabele genen, regressie op mitochondriale genexpressie & dataschaling
+seurat.filtered <- SCTransform(seurat.filtered, vars.to.regress = "percent.mt", verbose = FALSE)
+DefaultAssay(seurat.filtered) <- "SCT"
+```
+
+```{r variable_genes_overview}
+# Toon hoeveel variabele genen er geselecteerd zijn
+length(VariableFeatures(seurat.filtered))
+
+# 10 meest variabele genen uitzoeken 
+top10 <- head(VariableFeatures(seurat.filtered), 10)
+print(top10)
+```
+
+```{r visualize_hvg}
+# Controleer of variabele genen beschikbaar zijn
+top10 <- head(VariableFeatures(seurat.filtered), 10)
+
+# Plot variabele genen en label de top 10
+Plot1 <- VariableFeaturePlot(seurat.filtered) 
+Plot1 + LabelPoints(plot = Plot1, points = top10, repel = TRUE)
+```
+
+```{r run_pca}
+seurat.filtered <- RunPCA(seurat.filtered, features = VariableFeatures(seurat.filtered))
+```
+
+```{r pca_loadings_plot}
+VizDimLoadings(seurat.filtered, dims = 1:2, reduction = "pca")
+```
+
+```{r pca_dimplot}
+# Visualisatie van cellen in PC-ruimte
+DimPlot(seurat.filtered, reduction = "pca")
+```
+
+```{r pca_elbowplot}
+# PCA analyse plotten
+ElbowPlot(seurat.filtered)
+```
+
+```{r clustering_umap}
+# vind buren, cluster cellen, bereken UMAP en plot het resultaat
+seurat.filtered <- FindNeighbors(seurat.filtered, dims = 1:8)
+seurat.filtered <- FindClusters(seurat.filtered, resolution = 0.5)
+seurat.filtered <- RunUMAP(seurat.filtered, dims = 1:8)
+
+umap_plot <- DimPlot(seurat.filtered, reduction = "umap", label = TRUE)
+print(umap_plot)
+```
+
+```{r find_top3_markers}
+# Bekijk top 3 markergenen per cluster
+markers_all <- FindAllMarkers(seurat.filtered, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+
+top3_markers_per_cluster <- markers_all %>%
+  group_by(cluster) %>%
+  slice_max(order_by = avg_log2FC, n = 3)
+
+print(top3_markers_per_cluster, n = Inf)
+```
+
+```{r select_top_genes_clusters_2_3}
+# Vergelijk clusters 2 en 3: selecteer top 15 genen per cluster
+top_genen <- markers_all %>%
+  filter(cluster %in% c(2, 3)) %>%
+  group_by(cluster) %>%
+  top_n(n = 15, wt = avg_log2FC) %>%
+  pull(gene) %>%
+  unique()
+```
+
+```{r top15_and_overlap_clusters_2_3}
+# Top 15 genen per cluster apart
+top_2 <- markers_all %>% filter(cluster == 2) %>% top_n(15, avg_log2FC) %>% pull(gene)
+top_3 <- markers_all %>% filter(cluster == 3) %>% top_n(15, avg_log2FC) %>% pull(gene)
+
+# Overlap bekijken tussen cluster 2 en 3
+overlap <- intersect(top_2, top_3)
+print(overlap)
+```
+
+```{r subset_clusters_2_3}
+# Maak subset van alleen cluster 2 en 3
+seurat_2_3 <- subset(seurat.filtered, idents = c(2,3))
+
+# Combineer de top genen van beide clusters
+top_genes <- c(top_2, top_3) %>% unique()
+```
+
+```{r dotplot_clusters_2_3}
+# Maak dotplot voor clusters 2 en 3 met geselecteerde genen
+DotPlot(seurat_2_3, features = top_genes) + RotatedAxis()
+```
+
+
+
 
 Normaliseren: SCTransform is vooral beter als je data complexer is, met variabele sequencing depth, veel lage expressiewaarden en technische variatie — precies het geval bij VASA-seq. Daarom zie je in moderne pipelines dat SCTransform de voorkeur krijgt.
 
@@ -25,16 +200,6 @@ extra regressie stap. genen:
 Tijdens de normalisatie met SCTransform() heb ik het percentage mitochonderiale genexpressie (percent.mt) meegenomen als regressiefactor. dit betekend niet dat mitochondriale genen zijn verwijderd, maar dat hun in vloed op de expressieniveaus van andere genen is gecorrigeerd.zo wordt voorkomen dat variatie door celstress of technische redenen de clustering en downsstream analyses beinvloed. 
 
 visualisatie:
-```{r hvg-plot, fig.width=8, fig.height=6}
-# Visualisatie van de hoogst variabele genen
-VariableFeaturePlot(seurat_object)
-
-# Top 10 meest variabele genen ophalen
-top10 <- head(VariableFeatures(seurat_object), 10)
-
-# Plot met labels voor de top 10 genen
-VariableFeaturePlot(seurat_object) + LabelPoints(points = top10, repel = TRUE)
-```
 ## Exploratieve analyse van de belangrijkste genen in PCA
 
 Om de biologische betekenis van de belangrijkste bronnen van variatie in de dataset te begrijpen, is Principal Component Analysis (PCA) uitgevoerd op de variabele genen.
