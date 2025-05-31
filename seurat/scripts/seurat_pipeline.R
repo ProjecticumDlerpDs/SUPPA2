@@ -58,16 +58,40 @@ dev.off()
 #QC filtering, subset van de data
 seurat.filtered <- subset(seurat, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 6)
 
-#normaliseren en selectie van de hvg's
+#normalisatie, selectie variabele genen, regressie op mitochondriale genexpressie & dataschaling
 seurat.filtered <- SCTransform(seurat.filtered, vars.to.regress = "percent.mt", verbose = FALSE)
 DefaultAssay(seurat.filtered) <- "SCT"
 
-# Toon hoeveel variabele genen er geselecteerd zijn
+#toon hoeveel variabele genen er geselecteerd zijn
 length(VariableFeatures(seurat.filtered))
 
 #10 meest variabele genen uitzoeken 
 top10 <- head(VariableFeatures(seurat.filtered), 10)
 print(top10)
 
-#test 123
+#visualisatie van de hvg's
+png("variable_features_plot.png", width = 1000, height = 600)
+plot1 <- VariableFeaturePlot(seurat.filtered)
+top10 <- head(VariableFeatures(seurat.filtered), 10)
+print(plot1 + LabelPoints(plot1, points = top10, repel = TRUE))
 
+dev.off()
+
+#PCA analyse
+seurat.filtered <- RunPCA(seurat.filtered, features = VariableFeatures(object = seurat.filtered))
+print(seurat.filtered[["pca"]], dims = 1:5, nfeatures = 10)
+
+#sla loadings plot op als afbeelding
+png("PCA_loadings_plot.png", width = 800, height = 600)
+VizDimLoadings(seurat.filtered, dims = 1:2, reduction = "pca")
+
+dev.off()
+#Deze plots helpen de belangrijkste genen te identificeren die de variatie in de dataset verklaren.
+#Dit is nuttig om de biologie achter de data te begrijpen, de kwaliteit van de data te checken,
+# en context te geven aan de splicing-analyse met suppa2.
+
+#visualisatie van cellen in PC-ruimte
+png("PCA_plot.png", width = 800, height = 600)
+DimPlot(seurat.filtered, reduction = "pca")
+
+dev.off()

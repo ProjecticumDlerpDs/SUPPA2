@@ -20,3 +20,33 @@ De topgenen bevatten onder andere:
 - Hemoglobinegenen (Hbb-bh1, Hbb-y, Hba-x): typisch actief in vroege rode bloedcellen in het embryo
 - Spier- en hartgerelateerde genen (Ttn, Myh6, Actc1, Ryr2): betrokken bij hartontwikkeling, wat past bij cellen in deze embryonale fase
 - Genen betrokken bij transport en metabolisme (zoals Apob, Cubn, Slc8a1): kunnen wijzen op actieve cellen met functies in vet- of iontransport
+
+extra regressie stap. genen:
+Tijdens de normalisatie met SCTransform() heb ik het percentage mitochonderiale genexpressie (percent.mt) meegenomen als regressiefactor. dit betekend niet dat mitochondriale genen zijn verwijderd, maar dat hun in vloed op de expressieniveaus van andere genen is gecorrigeerd.zo wordt voorkomen dat variatie door celstress of technische redenen de clustering en downsstream analyses beinvloed. 
+
+visualisatie:
+```{r hvg-plot, fig.width=8, fig.height=6}
+# Visualisatie van de hoogst variabele genen
+VariableFeaturePlot(seurat_object)
+
+# Top 10 meest variabele genen ophalen
+top10 <- head(VariableFeatures(seurat_object), 10)
+
+# Plot met labels voor de top 10 genen
+VariableFeaturePlot(seurat_object) + LabelPoints(points = top10, repel = TRUE)
+```
+## Exploratieve analyse van de belangrijkste genen in PCA
+
+Om de biologische betekenis van de belangrijkste bronnen van variatie in de dataset te begrijpen, is Principal Component Analysis (PCA) uitgevoerd op de variabele genen.
+
+Met de functie `VizDimLoadings()` zijn de genen geïdentificeerd die het sterkst bijdragen aan PC1 en PC2. 
+
+### Interpretatie van PC1
+
+De genen die positief bijdragen aan PC1 omvatten bekende imprintingsgenen en genen betrokken bij groei en ontwikkeling, zoals *H19*, *Igf2*, *Peg10* en *Apoe*. Dit wijst erop dat PC1 mogelijk een biologisch verschil representeert gerelateerd aan imprinting en embryonale ontwikkeling.
+
+De genen die negatief bijdragen aan PC1 zijn voornamelijk gerelateerd aan rode bloedcel functie en ontwikkeling, waaronder verschillende hemoglobine-genen (*Hbb-y*, *Hba-a1*) en cytoskelet-gerelateerde genen (*Ank1*, *Sptb*). Dit suggereert dat PC1 de variatie onderscheidt tussen cellen met een bloedcel-achtige expressie en cellen met een imprintings- en groei-gerelateerde expressie.
+
+
+
+
