@@ -12,6 +12,7 @@ DLERPA Bioinformatica project over alternatieve splicing met SUPPA2.
 
 - [Beschrijving](#beschrijving)
 - [Benodigdheden](#benodigdheden)
+- [Reproduceerbare omgeving](#reproduceerbare-omgeving)
 - [Bestandenstructuur](#bestandenstructuur)
 - [Data](#data)
 - [Uitvoering](#uitvoering)
@@ -47,6 +48,18 @@ Hoe kan SUPPA2 worden gebruikt voor de analyse van alternatieve splicing in VASA
   - `tidyr`
 - **Python** (versie 3.6 of hoger, omdat SUPPA2 in Python draait)
 - **SUPPA2** tool (https://github.com/comprna/SUPPA)
+
+---
+
+## Reproduceerbare omgeving
+
+Dit project gebruikt [`renv`](https://rstudio.github.io/renv/) om de R-omgeving te beheren.
+
+Om de juiste packages te installeren, voer het volgende uit in R:
+
+```r
+renv::restore()
+```
 
 ---
 
