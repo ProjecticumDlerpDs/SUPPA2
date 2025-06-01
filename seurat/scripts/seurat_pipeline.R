@@ -155,3 +155,4 @@ DotPlot(seurat_2_3, features = top_genes) + RotatedAxis()
 png("seurat/output/dotplot_2_3.png", width = 800, height = 600)
 print(DotPlot(seurat_2_3, features = top_genes) + RotatedAxis())
 dev.off()
+
