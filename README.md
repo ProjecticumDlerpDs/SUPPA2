@@ -46,6 +46,7 @@ Hoe kan SUPPA2 worden gebruikt voor de analyse van alternatieve splicing in VASA
   - `ggplot2`
   - `patchwork`
   - `tidyr`
+  - `colorspace`
 - **Python** (versie 3.6 of hoger, omdat SUPPA2 in Python draait)
 - **SUPPA2** tool (https://github.com/comprna/SUPPA)
 
