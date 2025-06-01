@@ -2,22 +2,30 @@
 title: "seurat"
 author: "Jalisa van der Zeeuw"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  pdf_document:
+    fig_caption: true
+    number_sections: true
+    fig_width: 5
+    fig_height: 4
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 ## Inleiding
-test
+Voordat alternatieve splicing-analyse met SUPPA2 kan worden uitgevoerd, moet de ruwe VASA-seq data eerst zorgvuldig worden voorbewerkt. In dit project analyseren we VASA-seq data afkomstig van muizenembryo's. VASA-seq is een techniek die het mogelijk maakt om het transcriptoom van individuele cellen te profileren, waardoor we gedetailleerde genexpressie-informatie krijgen per cel. Omdat deze data zowel biologische variatie als ruis bevat, is een grondige kwaliteitscontrole en opschoning noodzakelijk voordat verdere analyses kunnen plaatsvinden.
+De preprocessing wordt uitgevoerd met behulp van de Seurat-toolkit. Seurat biedt een uitgebreide workflow voor kwaliteitscontrole, normalisatie, identificatie van variabele genen, dimensionele reductie, en clustering van cellen.
 
-## Doel
-test
+## Doelstelling
+Het doel van deze analyse is om uit de VASA-seq data betrouwbare biologische inzichten te verkrijgen door middel van zorgvuldige verwerking en analyse in Seurat. Hierbij ligt de focus op het identificeren van celtypen en celtoestanden, die vervolgens gebruikt kunnen worden voor verdere analyse van alternatieve splicing met SUPPA2.
 
-## Stappen van de worflow
-test
+Het doel van deze analyse is om de volgende deelvraag te beantwoorden:
+*Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?*
 
+### Packages laden
+We beginnen met het laden van de benodigde R packages voor de analyse. Deze pakketten zijn nodig voor data-manipulatie (`dplyr`, `tidyr`), visualisatie (`ggplot2`), en het werken met single-cell data (`Seurat`, `Matrix`).
 
 ```{r load_packages, message=FALSE, warning=FALSE}
 # Inladen van benodigde packages
@@ -28,11 +36,18 @@ library(Seurat)
 library(Matrix)
 ```
 
+### Inladen van metadata
+In deze stap laden we de metadata in voor zowel de features (genen) als de samples (cellen). De featuremetadata bevat bijvoorbeeld de namen en eigenschappen van de genen, terwijl de samplemetadata informatie bevat over de individuele cellen, zoals een cel-ID of celtype. Deze informatie is essentieel om de ruwe read-counts correct te koppelen aan genen en cellen, en vormt dus een onmisbaar onderdeel van de dataset.
+
 ```{r load_metadata}
 features_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz")
 samples_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv")
 
 ```
+
+### Inladen van de count matrix
+De ruwe expressiedata van de cellen wordt ingelezen in de vorm van een sparse matrix, waarbij rijen genen voorstellen en kolomen individuele cellen. deze count matrix bevat het aantal reads per gen per cel, en vormt de basis voor de downstream-analyse.
+Met de functie ReadMtx() worden de matrix zelf, de bijbehorende geninformatie (features) en celinformatie (barcodes) gecombineerd tot één structuur. 
 
 ```{r load_Mtx}
 counts <- ReadMtx(
@@ -49,6 +64,10 @@ counts <- ReadMtx(
 
 ```
 
+### Aanmaken van het Seurat-object
+De ingelezen count matrix wordt nu omgezet naar een Seurat-object met de functie `CreateSeuratObject()`. Dit object, dat hier wordt opgeslagen onder de naam seurat, bevat de expressiegegevens van de cellen en wordt gebruikt als uitgangspunt voor alle volgende analyses.
+Na het aanmaken wordt het object kort bekeken met `seurat` en `heads(seurat)` om te controleren of het correct is opgebouwd en de data er logisch uitziet.
+
 ```{r create_seurat_object}
 # Aanmaken Seurat object met ruwe data
 seurat <- CreateSeuratObject(counts = counts,
@@ -61,31 +80,56 @@ seurat
 head(seurat)
 ```
 
+### Berekenen van het mitochondriaal percentage
+Om de kwaliteit van de cellen te beoordelen, wordt het percentage mitochondriale genexpressie per cel berekend. Een verhoogd percentage mitochondriale RNA's kan wijzen op beschadigde of afstervende cellen.
+Mitochondriale genen worden herkend aan het voorvoegsel "mt-" in hun naam. Deze genen worden geselecteerd op basis van hun naam, waarna het percentage mitochondriale expressie per cel wordt toegevoegd aan het Seurat opject, seurat, als nieuw metadata-kolom percent.mt
+
 ```{r calculate_percent_mt}
 # Bereken percentage mitochondriale genen
 mito.features <- grep("^mt-", rownames(seurat), value = TRUE, ignore.case = TRUE)
 seurat[["percent.mt"]] <- PercentageFeatureSet(seurat, features = mito.features)
 ```
 
-```{r qc_vlnplot}
+### Quality Control visualisaties
+In deze stap maken we verschillende grafieke om de kwaliteit van onze data te beordelen. Met een violin plot (VlnPlot) visualiseren we per cel:
+- het aantal gedetecteerde genen (nFeature_RNA)
+- het totaal aantal getelde transcripties (nCount_RNA) 
+- het percentage mitochondriale genen (percent.mt). 
+
+Deze plots helpen om cellen met slechte kwaliteit, zoals cellen met weinig genexpressie of veel mitochondriaal RNA te identificeren. Het percentage mitochondriale genexpressie is een indicatie van de kwaliteit van de cellen; een hoog percentage kan duiden op beschadigde of gestresste cellen. Door deze plots te bekijken, kunnen we bepalen welke cellen geschikt zijn voor verdere analyse.
+
+```{r qc_vlnplot, fig.width=11, fig.height=4}
 # Quality Control plots voor features, counts en percent.mt
 VlnPlot(seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
         layer = "counts",
         ncol = 3)
 ```
 
-```{r qc_scatterplots}
+Vervolgens maken we scatterplots waarbij deze verschillende kwaliteitskenmerken met elkaar vergeleken worden. Door deze kennerken in relatie tot elkaar te bekijken, kunnen we mogelijke verbanden of afwijkingen identificeren die met afzonderlijke visualisaties niet direct zichtbaar zijn. Bijvoorbeeld, een hoge mitochondriale expressie samen met een laag aantal gedetecteerde genen kan duiden op beschadigde cellen. Maar een hoog mitochondriale expressie samen met een hoog aantal gedetecteerde genen, kan weer duiden op doublets. Dit geeft aanwijzingen over eventuele slechte kwaliteit cellen of technische artefacten.
+```{r qc_scatterplots, fig.width=12, fig.height=5}
 # QC scatterplots
 plot1 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
 plot1 + plot2
 ```
 
+### Filtering 
+Om de kwaliteit van de dataset de waarborgen, worden de cellen gefiltert. De cellen die tussen de 200 en 2500 genen hebben en minder dan 6% mitochondriale expressie worden behouden. Deze gefilterde dataset, hierna genoemd seurat.filtered, wordt gebruikt voor downstream analyse. De gekozen grenzen voor filtering zijn gebaseerd op basis van de zojuist gemaakte plots, rekening houdend met de biologische aard van de data (muizen embryo's).
+
 ```{r qc_filtering_subset}
 # QC filtering, subset van de data
 seurat.filtered <- subset(seurat, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 6)
 ```
 
+### Normalisatie, selectie van variabele genen en dataschaling met SCTranasform
+In deze stap passen we normalisatie en variable genenselectie toe met de functie `SCTransform`. Deze methode vervangt de klassieke log-normalisatie en intergreert tegelijk dataschaling en regressie. Hierbij wordt het effect van mitochondriale genexpressie (percent.mt) gecorrigeerd, omdat dit de downstream analyses kan verstoren. 
+Door regressie op percent.mt verminderen we deze technische variatie, zodat de biologische verschillen beter naar voren komen. 
+Normalisatie zorgt ervoor dat verschillen in sequencing-diepte tussen cellen worden gecorrigeerd, zodat genexpressiewaardes beter vergelijkbaar zijn.
+Dataschaling brengt de genexpressiewaarden op een vergelijkbaar schaalnivuea, wat belangrijk is voor de downstream methoden (PCA en clustering).
+Tegelijk selecteert `SCTransform` automatisch de meest variabele genen (HVG's), wat belangrijk is voor de downstream analyses. De hoog variabele genen zijn genen die tussen cellen sterk verschillen in expressie, en geven ons de meeste informatie. Op basis van deze informatie kunnen we verschillen in celtypen of toestanden onderscheiden.
+
+Hieronder zien we het aantal HVG's dat SCTransform heeft geselecteerd en de top10.
+Vervolgens zie je plots met alle genen, waarbij de hoog variable genen rood zijn gemarkeerd. Deze HVG's worden meegenomen voor derere analyse. Daarnaast wordt dezelfde plot getoond, maar dan met de top10 HVG's gelabeld, zodat je direct de belangrijkste variabele genen kunt herkennen.
 ```{r normalization_and_scaling}
 # Normalisatie, selectie variabele genen, regressie op mitochondriale genexpressie & dataschaling
 seurat.filtered <- SCTransform(seurat.filtered, vars.to.regress = "percent.mt", verbose = FALSE)
@@ -101,7 +145,7 @@ top10 <- head(VariableFeatures(seurat.filtered), 10)
 print(top10)
 ```
 
-```{r visualize_hvg}
+```{r visualize_hvg, fig.width=12, fig.height=5}
 # Controleer of variabele genen beschikbaar zijn
 top10 <- head(VariableFeatures(seurat.filtered), 10)
 
@@ -110,23 +154,50 @@ Plot1 <- VariableFeaturePlot(seurat.filtered)
 Plot1 + LabelPoints(plot = Plot1, points = top10, repel = TRUE)
 ```
 
+### Principal Component Analysis (PCA)
+We voeren een PCA uit op de hoogst variabele genen om de belangrijkste variaties in de data te identificeren. PCA reduceert de hoge dimensies van de dataset naar een kleiner aantal samengestelde variabelen, genaamd principal components (PC's). Met dimensies wordt bedoeld het aantal variabelen waarop de cellen worden geanalyseerd. Elke dimensie komt in dit geval overeen met de expressiewaarde van een gen in een cel.Hierdoor wordt het de data eenvoudiger te visualiseren en interpreteren. De eerste paar principal components bevatten de meeste informatie over de variatie tussen cellen. 
 ```{r run_pca}
 seurat.filtered <- RunPCA(seurat.filtered, features = VariableFeatures(seurat.filtered))
 ```
 
-```{r pca_loadings_plot}
+De volgened plot toont de genen die het meest bijdragen aan de geselecteerde principal components (PC's), in dit geval PC1 en PC2.
+Elke stip vertegenwoordigt een gen en de positie op de x-as geeft de bijdrage (loading) van dat gen aan de PC. Genen aan de uiteinden van de assen (van de 0 af) dragen het sterkst bij aan de variatie in die PC. De genen links van 0 dragen daarbij negatief bij, rechts van de 0 positief - dat betekent dat deze genen in verschillende richtingen bijdragen aan de scheiding van de cellen. De genen met positieve en negateve bijdragen hebben tegenovergestelde expressiepatronen in de cellen: als genen met een positieve bijdrage hoog tot expressie komen in een groep cellen, zullen de genen met negatieve bijdrage juist laag tot expressie komen, en andersom.
+
+Om een inzicht te krijgen in welke biologische processen of celtypen de dimensie eigenlijk presenteert, kun je informatie zoeken over de genen die hier worden weergeven:
+
+De genen die positief bijdragen aan PC1 omvatten bekende imprintingsgenen en genen betrokken bij groei en ontwikkeling, zoals *H19*, *Igf2*, *Peg10* en *Apoe*. Dit wijst erop dat PC1 mogelijk een biologisch verschil representeert gerelateerd aan imprinting en embryonale ontwikkeling.
+
+De genen die negatief bijdragen aan PC1 zijn voornamelijk gerelateerd aan rode bloedcel functie en ontwikkeling, waaronder verschillende hemoglobine-genen (*Hbb-y*, *Hba-a1*) en cytoskelet-gerelateerde genen (*Ank1*, *Sptb*). Dit suggereert dat PC1 de variatie onderscheidt tussen cellen met een bloedcel-achtige expressie en cellen met een imprintings- en groei-gerelateerde expressie.
+
+Het opzoeken van de genen die bijdragen aan PC's helpt je om je data biologisch te interpreteren, waardoor je analyses meer betekenis krijgen.
+
+```{r pca_loadings_plot, fig.width=10, fig.height=5}
 VizDimLoadings(seurat.filtered, dims = 1:2, reduction = "pca")
 ```
 
-```{r pca_dimplot}
+De Dimplot hieronder toont de cellen geprojecteerd in de ruimte van de belangrijkste hoofdcomponenten (PC's). Elke stip vertegenwoordigt een cel, en de positionering laat zien hoe vergelijkbaar de cellen zijn qua genexpressieprofiel. Cellen die dicht bij elkaar liggen, hebben een vergelijkbaar expressiepatroon, terwijl cellen die ver van elkaar liggen, verschillen in hun genexpressie.
+Deze visualisatie geeft een eerste in druk van de grote structuren en mogelijke clusters in de dataset. Dit is een globale kwaliteitscheck om te zien of er structuur in de data zit. Stel dat er helemaal geen groepen te zien zijn, dan is dat verdacht. 
+```{r pca_dimplot, fig.width=8, fig.height=5}
 # Visualisatie van cellen in PC-ruimte
 DimPlot(seurat.filtered, reduction = "pca")
 ```
+Vervolgens wordt er een ElbowPlot gemaakt om te bepalen hoeveel PC's worden meegenomen voor verdere analyse, clustering en UMAP. Dee plot helpt kiezen hoeveel PC's informatief genoeg zijn om te behouden. Op de x-as zie je het nummer van de PC, en op de y-as de de hoeveelheid variantie die elk PC verklaard (hoeveel informatie die PC bevat). De lijn daalt geleidelijk: de eerste PC's bevatten veel informatie, latere steeds minder.
+Er wordt gekeken naar het punt waarop de lijn afvlakt - daar ontstaat een soort knik, ookwel de elleboog genoemd. Dat punt geeft aan hoeveel PC's er het beste kunnen worden meegenomen. 
 
-```{r pca_elbowplot}
+Er is besloten om PC1 t/m PC8 mee te nenen voor verdere analyse.
+
+```{r pca_elbowplot, fig.width=10, fig.width=5}
 # PCA analyse plotten
 ElbowPlot(seurat.filtered)
 ```
+
+### Clustering van cellen
+De volgende stap is het groeperen van cellen die vergelijkbare genexpressieprofielen hebben. Dit noemen we clustering.
+Clustering helpt om biologisch relevante celtypes of -toestanden te onderscheiden zonder vooraf te weten wat die precies zijn. 
+Door te clusteren krijgen we inzicht in de biologische structuur van de data. De clusters vormen de basis voor vervolganalyse, zoals:
+- het herkennen en benoemen van celtypes,
+- het ontdekken van nieuwe of zeldzame celpopulaties,
+- of het vergelijken van celgroepen tussen condities.
 
 ```{r clustering_umap}
 # vind buren, cluster cellen, bereken UMAP en plot het resultaat
@@ -138,6 +209,7 @@ umap_plot <- DimPlot(seurat.filtered, reduction = "umap", label = TRUE)
 print(umap_plot)
 ```
 
+*dit moet ik nog toevoegen*
 ```{r find_top3_markers}
 # Bekijk top 3 markergenen per cluster
 markers_all <- FindAllMarkers(seurat.filtered, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
@@ -149,6 +221,7 @@ top3_markers_per_cluster <- markers_all %>%
 print(top3_markers_per_cluster, n = Inf)
 ```
 
+
 ```{r select_top_genes_clusters_2_3}
 # Vergelijk clusters 2 en 3: selecteer top 15 genen per cluster
 top_genen <- markers_all %>%
@@ -158,6 +231,7 @@ top_genen <- markers_all %>%
   pull(gene) %>%
   unique()
 ```
+
 
 ```{r top15_and_overlap_clusters_2_3}
 # Top 15 genen per cluster apart
@@ -169,6 +243,8 @@ overlap <- intersect(top_2, top_3)
 print(overlap)
 ```
 
+
+
 ```{r subset_clusters_2_3}
 # Maak subset van alleen cluster 2 en 3
 seurat_2_3 <- subset(seurat.filtered, idents = c(2,3))
@@ -177,13 +253,16 @@ seurat_2_3 <- subset(seurat.filtered, idents = c(2,3))
 top_genes <- c(top_2, top_3) %>% unique()
 ```
 
-```{r dotplot_clusters_2_3}
+
+
+```{r dotplot_clusters_2_3, fig.width=10, fig.height=5}
 # Maak dotplot voor clusters 2 en 3 met geselecteerde genen
 DotPlot(seurat_2_3, features = top_genes) + RotatedAxis()
 ```
 
 
 
+## Conclusie en Discussie *mis nog niet af, moet nog worden toegevoegd en herschreven*
 
 Normaliseren: SCTransform is vooral beter als je data complexer is, met variabele sequencing depth, veel lage expressiewaarden en technische variatie — precies het geval bij VASA-seq. Daarom zie je in moderne pipelines dat SCTransform de voorkeur krijgt.
 
@@ -198,20 +277,6 @@ De topgenen bevatten onder andere:
 
 extra regressie stap. genen:
 Tijdens de normalisatie met SCTransform() heb ik het percentage mitochonderiale genexpressie (percent.mt) meegenomen als regressiefactor. dit betekend niet dat mitochondriale genen zijn verwijderd, maar dat hun in vloed op de expressieniveaus van andere genen is gecorrigeerd.zo wordt voorkomen dat variatie door celstress of technische redenen de clustering en downsstream analyses beinvloed. 
-
-visualisatie:
-## Exploratieve analyse van de belangrijkste genen in PCA
-
-Om de biologische betekenis van de belangrijkste bronnen van variatie in de dataset te begrijpen, is Principal Component Analysis (PCA) uitgevoerd op de variabele genen.
-
-Met de functie `VizDimLoadings()` zijn de genen geïdentificeerd die het sterkst bijdragen aan PC1 en PC2. 
-
-### Interpretatie van PC1
-
-De genen die positief bijdragen aan PC1 omvatten bekende imprintingsgenen en genen betrokken bij groei en ontwikkeling, zoals *H19*, *Igf2*, *Peg10* en *Apoe*. Dit wijst erop dat PC1 mogelijk een biologisch verschil representeert gerelateerd aan imprinting en embryonale ontwikkeling.
-
-De genen die negatief bijdragen aan PC1 zijn voornamelijk gerelateerd aan rode bloedcel functie en ontwikkeling, waaronder verschillende hemoglobine-genen (*Hbb-y*, *Hba-a1*) en cytoskelet-gerelateerde genen (*Ank1*, *Sptb*). Dit suggereert dat PC1 de variatie onderscheidt tussen cellen met een bloedcel-achtige expressie en cellen met een imprintings- en groei-gerelateerde expressie.
-
 
 
 
