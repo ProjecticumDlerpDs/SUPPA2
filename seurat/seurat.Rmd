@@ -1,5 +1,5 @@
 ---
-title: "seurat"
+title: "Seurat-analyse"
 author: "Jalisa van der Zeeuw"
 date: "`r Sys.Date()`"
 output: 
@@ -13,6 +13,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
+
+# Seurat-gebaseerde analyse van VASA-seq data uit muizenembryo’s
 
 ## Inleiding
 Voordat alternatieve splicing-analyse met SUPPA2 kan worden uitgevoerd, moet de ruwe VASA-seq data eerst zorgvuldig worden voorbewerkt. In dit project analyseren we VASA-seq data afkomstig van muizenembryo's. VASA-seq is een techniek die het mogelijk maakt om het transcriptoom van individuele cellen te profileren, waardoor we gedetailleerde genexpressie-informatie krijgen per cel. Omdat deze data zowel biologische variatie als ruis bevat, is een grondige kwaliteitscontrole en opschoning noodzakelijk voordat verdere analyses kunnen plaatsvinden.
@@ -271,8 +273,11 @@ HVG = 3000: In embryonale datasets is de celdiversiteit doorgaans hoger vanwege 
 Na het toepassen van SCTransform() is automatisch een selectie gemaakt van de meest variabele genen binnen de dataset. Dit zijn genen waarvan de expressie sterk verschilt tussen cellen, en ze zijn belangrijk omdat ze vaak bijdragen aan het onderscheiden van celtypes in latere analyses (zoals clustering of trajectanalyse).
 Om te controleren of deze selectie biologisch logisch is — en niet alleen technische ruis bevat — heb ik de top 10 meest variabele genen bekeken. Deze controle geeft inzicht in welke genen de meeste bijdrage leveren aan de variatie tussen cellen in de dataset.
 De topgenen bevatten onder andere:
+
 - Hemoglobinegenen (Hbb-bh1, Hbb-y, Hba-x): typisch actief in vroege rode bloedcellen in het embryo
+
 - Spier- en hartgerelateerde genen (Ttn, Myh6, Actc1, Ryr2): betrokken bij hartontwikkeling, wat past bij cellen in deze embryonale fase
+
 - Genen betrokken bij transport en metabolisme (zoals Apob, Cubn, Slc8a1): kunnen wijzen op actieve cellen met functies in vet- of iontransport
 
 extra regressie stap. genen:
