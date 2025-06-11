@@ -16,6 +16,7 @@ seurat/data/e85_count_matrix.csv.gz
 *.RData
 *.bam
 .DS_Store
-raw_data/
 seurat/*.pdf
-suppa2/scripts/
+raw_data/*
+!raw_data/e85_srr_list.txt
+
