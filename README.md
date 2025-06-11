@@ -72,6 +72,9 @@ Het project is opgedeeld in twee hoofdmappen, elk met eigen data, scripts en out
 ```
 projectmap/
 |-- README.md
+|-- raw_data/
+|   |-- e85_srr_list.txt
+|   `-- fastq_files/
 |-- seurat/
 |   |-- data/
 |   |-- output/
@@ -82,6 +85,7 @@ projectmap/
 |   |-- data/
 |   |-- output/
 |   `-- scripts/
+|   |   `-- run_download_fastq.sh
 `-- suppa2.Rproj
 ```
 
@@ -89,18 +93,19 @@ projectmap/
 
 ## Data
 
-De gebruikte VASA-seq data zijn opgeslagen op de HU-server en worden niet allemaal direct opgenomen in deze repository vanwege de bestandsgrootte en privacyredenen.
+De gebruikte VASA-seq data zijn opgeslagen op de HU-server en worden niet allemaal direct opgenomen in deze repository vanwege de bestandsgrootte.
 
 Toegang tot de data kan verkregen worden via de server op het volgende pad:  
 `/home/data/projecticum/splicing/data`  
 
 Neem contact op met de projectleider of beheerder voor toegangsinformatie en rechten.
 
-Opmerkingen:
+**Opmerkingen:**
 
-Dit project wordt lokaal uitgevoerd, dus in de scripts verwijs ik naar paden binnen mijn eigen projectmap.
-Op de server staan diezelfde bestanden in een andere directory.
-Hieronder staan de exacte bestandsnamen en de serverlocatie waar ze te vinden zijn:
+Dit project is lokaal uitgevoerd, dus in de scripts wordt standaard verwezen naar paden binnen de projectmap.
+Wanneer je het project op de server draait, wordt automatisch het serverpad gebruikt.
+
+### Bestanden op de server
 
 Serverpad: `/home/data/projecticum/splicing/data` 
 
@@ -110,7 +115,30 @@ Bestanden:
 - "e85_feature_metadata.csv.gz"
 - "e85_sample_metadata.csv"
 
-De data is voorbereid en gefilterd met behulp van de Seurat workflow, waarna de output als input dient voor SUPPA2 analyses.
+Deze bestanden zijn gebruikt als input voor de Seurat-analyse, waarin kwaliteitscontrole, normalisatie en clustering zijn uitgevoerd.
+
+Om dit reproduceerbaar te maken, is in de scripts hetvolgende opgenomen om automatisch het juiste pad te kiezen:
+
+```r
+if (dir.exists("/home/data/projecticum/splicing/data")) {
+  data_dir <- "/home/data/projecticum/splicing/data"
+} else {
+  data_dir <- file.path("seurat", "data")
+}
+```
+
+### Extra data voor transcriptkwantificatie
+Voor het analyseren van alternatieve splicing met SUPPA2 zijn andere type data vereist, namelijk transcriptannotatie (.gtf) en kwantificaties in TPM. Deze TPM-waarden moeten eerst worden gegenereerd op basis van ruwe sequencingdata (FASTQ-bestanden)
+
+De FASTQ-bestanden zijn daarom gedownload met behulp van een eigen Bash-script: 
+
+- Script: `suppa2/scripts/run_download_fastq.sh`
+
+- De bijbehorende lijst met SRR-nummers: `raw_data/e85_srr_list.txt`
+
+- De outputmap met FASTQ-bestanden: `raw_data/fastq_files/`
+
+Het script controleert automatisch of bestanden al bestaan en slaat deze dan over. Zo wordt dubbel downloaden voorkomen.
 
 ---
 
