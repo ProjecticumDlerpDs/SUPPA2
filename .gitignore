@@ -8,3 +8,14 @@ seurat/data/e85_feature_metadata.csv.gz
 seurat/data/e85_feature_metadata.csv.gz
 seurat/data/e85_count_matrix.mtx.gz
 seurat/data/e85_count_matrix.csv.gz
+
+# Grote bestanden uitsluiten
+*.fastq
+*.fq
+*.pdf
+*.RData
+*.bam
+.DS_Store
+raw_data/
+seurat/*.pdf
+suppa2/scripts/

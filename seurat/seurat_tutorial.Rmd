@@ -23,9 +23,10 @@ In dit document leg ik mijn leerproces vast rondom het gebruik van Seurat voor h
 
 Het doel van deze tutorial is om basiskennis en ervaring op te doen met de bioinformatica-tool Seurat, die wordt gebruikt voor de analyse van single-cell RNA-sequencing data.
 
-Aangezien ik voorafgaand aan dit project geen ervaring had met Seurat, volg ik deze tutorial stap voor stap om inzicht te krijgen in de volledige workflow: van het inladen en voorbewerken van data tot aan de visualisatie en clustering.
+Aangezien ik voorafgaand aan dit project geen ervaring had met Seurat, volg ik deze tutorial stap voor stap om inzicht te krijgen in de volledige workflow: van het inladen en voorbewerken van data tot aan de visualisatie en clustering. Deze opgedane kennis en vaardigheden wil ik uiteindelijk toepassen in mijn eigen project. 
 
-Deze opgedane kennis en vaardigheden wil ik uiteindelijk toepassen in mijn eigen project. 
+Het doel van deze analyse is om de volgende deelvraag te beantwoorden:
+Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?
 
 ## Stappen van de workflow
 
