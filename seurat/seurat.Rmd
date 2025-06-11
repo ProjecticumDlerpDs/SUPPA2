@@ -37,15 +37,33 @@ library(tidyr)
 library(Seurat)
 library(Matrix)
 library(colorspace)
+library(here)
+library(glmGamPoi)
+
+# Bepaal data directory dynamisch
+if (dir.exists("/home/data/projecticum/splicing/data")) {
+  data_dir <- "/home/data/projecticum/splicing/data"
+} else {
+  data_dir <- here("seurat", "data")
+}
+```
+
+```{r check_data_files}
+# Check of de benodigde bestanden bestaan
+required_files <- c("e85_count_matrix.mtx.gz", "e85_feature_metadata.csv.gz", "e85_sample_metadata.csv")
+missing_files <- required_files[!file.exists(file.path(data_dir, required_files))]
+if(length(missing_files) > 0){
+  stop(paste("De volgende bestanden ontbreken in de data directory:", paste(missing_files, collapse = ", ")))
+}
 ```
 
 ### Inladen van metadata
 In deze stap laden we de metadata in voor zowel de features (genen) als de samples (cellen). De featuremetadata bevat bijvoorbeeld de namen en eigenschappen van de genen, terwijl de samplemetadata informatie bevat over de individuele cellen, zoals een cel-ID of celtype. Deze informatie is essentieel om de ruwe read-counts correct te koppelen aan genen en cellen, en vormt dus een onmisbaar onderdeel van de dataset.
 
 ```{r load_metadata}
-features_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz")
-samples_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv")
-
+# Stap 3: Lees metadata in met dynamische paden
+features_metadata <- read.csv(file.path(data_dir, "e85_feature_metadata.csv.gz"))
+samples_metadata <- read.csv(file.path(data_dir, "e85_sample_metadata.csv"))
 ```
 
 ### Inladen van de count matrix
@@ -53,10 +71,11 @@ De ruwe expressiedata van de cellen wordt ingelezen in de vorm van een sparse ma
 Met de functie ReadMtx() worden de matrix zelf, de bijbehorende geninformatie (features) en celinformatie (barcodes) gecombineerd tot één structuur. 
 
 ```{r load_Mtx}
+# Stap 4: Lees count matrix in met dynamische paden
 counts <- ReadMtx(
-  mtx = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/e85_count_matrix.mtx.gz",                 
-  features = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz",          
-  cells = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv",
+  mtx = file.path(data_dir, "e85_count_matrix.mtx.gz"),
+  features = file.path(data_dir, "e85_feature_metadata.csv.gz"),
+  cells = file.path(data_dir, "e85_sample_metadata.csv"),
   feature.sep = ",",
   feature.column = 1,
   cell.sep = ",",
@@ -64,7 +83,6 @@ counts <- ReadMtx(
   skip.cell = 1,
   skip.feature = 1
 )
-
 ```
 
 ### Aanmaken van het Seurat-object

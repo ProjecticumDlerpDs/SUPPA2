@@ -6,16 +6,24 @@ library(ggplot2)
 library(tidyr)
 library(Seurat)
 library(Matrix)
+library(here)
+
+# Controleer of data op server staat, anders lokaal pad gebruiken
+if (dir.exists("/home/data/projecticum/splicing/data")) {
+  data_dir <- "/home/data/projecticum/splicing/data"
+} else {
+  data_dir <- here("seurat", "data")
+}
 
 #inladen data
-features_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz")
-samples_metadata <- read.csv("/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv")
+features_metadata <- read.csv(file.path(data_dir, "e85_feature_metadata.csv.gz"))
+samples_metadata <- read.csv(file.path(data_dir, "e85_sample_metadata.csv"))
 
 #inladen MTX file
 counts <- ReadMtx(
-  mtx = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/e85_count_matrix.mtx.gz",                 
-  features = "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_feature_metadata.csv.gz",          
-  cells =       "/Users/jalisavanderzeeuw/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/e85_sample_metadata.csv",
+  mtx = file.path(data_dir, "e85_count_matrix.mtx.gz"),                 
+  features = file.path(data_dir, "e85_feature_metadata.csv.gz"),          
+  cells = file.path(data_dir, "e85_sample_metadata.csv"),
   feature.sep = ",",
   feature.column = 1,
   cell.sep = ",",
@@ -155,4 +163,5 @@ DotPlot(seurat_2_3, features = top_genes) + RotatedAxis()
 png("seurat/output/dotplot_2_3.png", width = 800, height = 600)
 print(DotPlot(seurat_2_3, features = top_genes) + RotatedAxis())
 dev.off()
+
 

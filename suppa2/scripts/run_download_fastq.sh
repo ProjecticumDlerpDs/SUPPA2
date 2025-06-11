@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Vereist: raw_data/e85_srr_list.txt moet bestaan (zie README voor uitleg)
+
 # Dit script leest de lijst met SRR-nummers en downloadt alle FASTQ bestanden met prefetch + fasterq-dump
 # Bestaande bestanden worden overgeslagen om dubbele downloads te voorkomen.
 
@@ -8,6 +10,13 @@ SRR_LIST="raw_data/e85_srr_list.txt"
 
 # Map waar je FASTQ bestanden in komen
 OUTDIR="raw_data/fastq_files"
+
+# Check of het SRR lijstbestand bestaat
+if [ ! -f "$SRR_LIST" ]; then
+  echo "Fout: bestand met SRR nummers niet gevonden: $SRR_LIST"
+  echo "Zorg dat je dit bestand hebt gedownload volgens de instructies in de README."
+  exit 1
+fi
 
 mkdir -p $OUTDIR
 

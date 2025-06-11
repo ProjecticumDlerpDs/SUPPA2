@@ -1,22 +1,29 @@
+# R project files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-path/naar/e85_count_matrix.mtx.gz
-path/naar/e85_count_matrix.csv.gz
-seurat/data/e85_feature_metadata.csv.gz
-seurat/data/e85_feature_metadata.csv.gz
-seurat/data/e85_count_matrix.mtx.gz
-seurat/data/e85_count_matrix.csv.gz
 
-# Grote bestanden uitsluiten
+# macOS system file
+.DS_store
+
+# seurat data - grote bestanden uitsluiten
+seurat/data/*
+
+# laat optioneel één bestand toe in raw_data/
+!raw_data/e85_srr_list.txt
+# alles in raq_data negeren behalve het bovenstaande
+raw_data/*
+
+# output en tijdelijk bestanden
 *.fastq
 *.fq
 *.pdf
 *.RData
 *.bam
-.DS_Store
+
+# eventueel losse exports of figuren in seurat/
 seurat/*.pdf
-raw_data/*
-!raw_data/e85_srr_list.txt
+
+
 

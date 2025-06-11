@@ -38,28 +38,42 @@ Hoe kan SUPPA2 worden gebruikt voor de analyse van alternatieve splicing in VASA
 ---
 
 ## Benodigdheden
+
+Voor dit project heb je zowel R als Python nodig. SUPPA2 werkt met Pythonm terwijl de pre-processing van de vasa-seq data met R/Seurat gebeurt.
+
+### Software
+
 - **R** (bij voorkeur versie 4.1 of hoger)
 - **RStudio** (optioneel, maar aanbevolen)
-- R-packages:
+- **Python** (verzie 3.6 of hoger)
+- **SUPPA2** (installatie via Github: https://github.com/comprna/SUPPA)
+
+### R-packages
+
+De volgende R-packages worden gebruikt in dit project:
+
   - `Seurat` (versie 5)
   - `dplyr`
   - `ggplot2`
   - `patchwork`
   - `tidyr`
   - `colorspace`
-- **Python** (versie 3.6 of hoger, omdat SUPPA2 in Python draait)
-- **SUPPA2** tool (https://github.com/comprna/SUPPA)
+  - `glmGamPoi` (aanbevolen voor snellere normalisatie met SCTranform)
 
----
-
-## Reproduceerbare omgeving
-
-Dit project gebruikt [`renv`](https://rstudio.github.io/renv/) om de R-omgeving te beheren.
-
-Om de juiste packages te installeren, voer het volgende uit in R:
+Je kunt alle packages installeren met behulp van renv om de juiste versies te garanderen:
 
 ```r
 renv::restore()
+```
+
+```r
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+  install.packages("BiocManager")
+}
+
+if (!require("glmGamPoi")) {
+  BiocManager::install("glmGamPoi")
+}
 ```
 
 ---
@@ -67,7 +81,6 @@ renv::restore()
 ## Bestandenstructuur
 
 Het project is opgedeeld in twee hoofdmappen, elk met eigen data, scripts en output:
-
 
 ```
 projectmap/
@@ -96,6 +109,7 @@ projectmap/
 De gebruikte VASA-seq data zijn opgeslagen op de HU-server en worden niet allemaal direct opgenomen in deze repository vanwege de bestandsgrootte.
 
 Toegang tot de data kan verkregen worden via de server op het volgende pad:  
+
 `/home/data/projecticum/splicing/data`  
 
 Neem contact op met de projectleider of beheerder voor toegangsinformatie en rechten.
@@ -107,17 +121,18 @@ Wanneer je het project op de server draait, wordt automatisch het serverpad gebr
 
 ### Bestanden op de server
 
-Serverpad: `/home/data/projecticum/splicing/data` 
+Serverpad:
+`/home/data/projecticum/splicing/data` 
 
 Bestanden:
 
-- "e85_count_matrix.mtx.gz"
-- "e85_feature_metadata.csv.gz"
-- "e85_sample_metadata.csv"
+- `e85_count_matrix.mtx.gz`
+- `e85_feature_metadata.csv.gz`
+- `e85_sample_metadata.csv`
 
 Deze bestanden zijn gebruikt als input voor de Seurat-analyse, waarin kwaliteitscontrole, normalisatie en clustering zijn uitgevoerd.
 
-Om dit reproduceerbaar te maken, is in de scripts hetvolgende opgenomen om automatisch het juiste pad te kiezen:
+Om dit reproduceerbaar te maken, is in de scripts de volgende code opgenomen om automatisch het juiste pad te kiezen:
 
 ```r
 if (dir.exists("/home/data/projecticum/splicing/data")) {
@@ -128,9 +143,9 @@ if (dir.exists("/home/data/projecticum/splicing/data")) {
 ```
 
 ### Extra data voor transcriptkwantificatie
-Voor het analyseren van alternatieve splicing met SUPPA2 zijn andere type data vereist, namelijk transcriptannotatie (.gtf) en kwantificaties in TPM. Deze TPM-waarden moeten eerst worden gegenereerd op basis van ruwe sequencingdata (FASTQ-bestanden)
+Voor het analyseren van alternatieve splicing met SUPPA2 zijn andere typen data vereist, namelijk transcriptannotatie (.gtf) en kwantificaties in TPM. Deze TPM-waarden moeten eerst worden gegenereerd op basis van ruwe sequencingdata (FASTQ-bestanden)
 
-De FASTQ-bestanden zijn daarom gedownload met behulp van een eigen Bash-script: 
+FASTQ-bestanden zijn daarom gedownload met behulp van een eigen Bash-script: 
 
 - Script: `suppa2/scripts/run_download_fastq.sh`
 
