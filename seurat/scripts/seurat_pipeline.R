@@ -7,7 +7,7 @@ library(tidyr)
 library(Seurat)
 library(Matrix)
 library(here)
-
+ 
 # Controleer of data op server staat, anders lokaal pad gebruiken
 if (dir.exists("/home/data/projecticum/splicing/data")) {
   data_dir <- "/home/data/projecticum/splicing/data"
