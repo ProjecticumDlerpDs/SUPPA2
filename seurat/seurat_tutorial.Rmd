@@ -8,25 +8,22 @@ output:
     number_sections: true
     fig_width: 5
     fig_height: 4
+    latex_engine: xelatex
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
-
 ## Inleiding
 
-In dit document leg ik mijn leerproces vast rondom het gebruik van Seurat voor het verwerken van scRNA-sequencing data. Dit is gebaseerd op een online tutorial en dient als voorbereiding op het toepassen van Seurat binnen mijn eigen project.
+In dit document leg ik mijn leerproces vast rondom het gebruik van Seurat voor het verwerken van scRNA-sequencing data. Dit is gebaseerd op een online tutorial en dient als voorbereiding op het toepassen van Seurat binnen mijn eigen project. De dat is verkrijgbaar via [de officiele Seurat-tutorial] (https://satijalab.org/seurat/articles/pbmc3k_tutorial.html) en is ook binnen dit project terug te vinden in de map 'seurat/data/data_tutorial', relatief vanaf de hoodfmap van de repository.
 
 ## Doel van de tutorial
+Deze tutorial is bedoeld om vertrouwd te raken met de werkwijze van Seurat en de verschillende stappen in de data-analyse, zoals kwaliteitscontrole, normalisatie, clustering en visualisatie. Hoewel deze tutorial niet direct gebruikmaakt van VASA-seq data, is het doel ervan wel degelijk gekoppeld aan mijn deelvraag:
 
-Het doel van deze tutorial is om basiskennis en ervaring op te doen met de bioinformatica-tool Seurat, die wordt gebruikt voor de analyse van single-cell RNA-sequencing data.
+**Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?**
 
-Aangezien ik voorafgaand aan dit project geen ervaring had met Seurat, volg ik deze tutorial stap voor stap om inzicht te krijgen in de volledige workflow: van het inladen en voorbewerken van data tot aan de visualisatie en clustering. Deze opgedane kennis en vaardigheden wil ik uiteindelijk toepassen in mijn eigen project. 
-
-Het doel van deze analyse is om de volgende deelvraag te beantwoorden:
-Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?
+Door deze oefenanalyse eerst zelfstandig uit te voeren, kon ik de werking van de Seurat tool beter begrijpen en uiteindelijk toepassing in mijn eigen analyse met VASA-sew data. Deze tutorial vormde daarmee een belangrijk onderdeel van mijn voorbereiding op het beantwoorden van de deelvraag.
 
 ## Stappen van de workflow
 
@@ -51,9 +48,15 @@ pbmc.data <- Read10X(data.dir = here("seurat", "data", "data_tutorial", "filtere
 pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc3k", min.cells = 3, min.features = 200)
 ```
 
-### Bekijk samenvatting van het object
-pbmc
+```{r pagina_einde, results='asis', echo=FALSE}
+cat("\\newpage")
+```
 
+### Bekijk samenvatting van het object
+
+```{r summary-object}
+pbmc
+```
 
 ### Kwaliteitscontrole (QC) en selectie van cellen voor verdere analyse
 
@@ -74,6 +77,7 @@ pbmc[["percent.mt"]] <- PercentageFeatureSet(pbmc, pattern = "^MT-")
 # Bekijk de eerste paar regels van de metadata om te controleren
 head(pbmc@meta.data)
 ```
+
 
 ### Visualisatie van QC-metrics
 
@@ -122,7 +126,7 @@ Standaard wordt er in Seurat gebruik gemaakt van de methode LogNormalize. Hierbi
 pbmc.filtered <- NormalizeData(pbmc.filtered, normalization.method = "LogNormalize", scale.factor = 10000, layer.name = "data")
 ```
 
-Deze globale scaling aanname houdt in dat elke cel oorspronkelijk evenveel RNA moleculen bevat, wat niet altijd klopt. Rr bestaan alternatieve normalisatiemethoden zoals SCTransform() die deze aanname niet maken en die soms betere resultaten geven. Zie uitgebreide tutorial en paper van Seurat over deze methode. **Hier wil ik later nog op terugkomen**
+Deze globale scaling aanname houdt in dat elke cel oorspronkelijk evenveel RNA moleculen bevat, wat niet altijd klopt. Rr bestaan alternatieve normalisatiemethoden zoals SCTransform() die deze aanname niet maken en die soms betere resultaten geven. Zie uitgebreide tutorial en paper van Seurat over deze methode. **Hier wil ik later nog op terugkomen** -> Hier heb ik me later nog in verdiept en heb er ook voor gekozen om de SCTransform() toe te passen bij de daadwerkelijke seurat analyse met de VASA-seq data.
 
 ### Selecteren van hoog-variabele genen
 
@@ -144,6 +148,11 @@ plot1 | plot2
 ```
 
 In deze scatterplot zie je op de x-as de gemiddelde expressie van genen, en op de y-as de genormaliseerde variantie. Genen die rechtsboven liggen in de plot zijn zowel hoog uitgedrukt als sterk variabel tussen cellen, en dus biologisch interessant. 
+
+
+```{r pagina_einde_2, results='asis', echo=FALSE}
+cat("\\newpage")
+```
 
 ### Data schaling (normalisatie over genen)
 
@@ -167,32 +176,92 @@ FeatureScatter(pbmc.filtered, feature1 = "nCount_RNA", feature2 = "percent.mt")
 # Bereken correlatiecoefficient
 cor.test(pbmc.filtered$nCount_RNA, pbmc.filtered$percent.mt)
 ```
-Uit de plot blijkt dat er geen duidelijk patroon zichtbaar is, en de correlatiecoefficient is zeer laag (r=-0.045), war wijst op afwezigheid van samenhang.
+Uit de plot blijkt dat er geen duidelijk patroon zichtbaar is, en de correlatiecoefficient is zeer laag (r=-0.045), wat wijst op afwezigheid van samenhang.
 
 Conclusie: Aangezien er geen sterke correlatie is tussen percent.mt en nCount_RNA, concluderen we dat het niet nodig is om deze variabele te corrigeren door middel van regressie in de ScaleData() stap. 
 
 ### Lineaire dimensiereductie met PCA
 
-Na het schalen van de data voeren we Principal Component Analysis (PCA) uit. PCA reduceert de complexiteit van de dataset door een aantal samenhangende variabelen (principal compontents) te maken die het grootste deel van de variantie in de data verklaren. Dit helpt bij het identificeren van patronen en groepen in cellen.
+Na het schalen van de data voeren we Principal Component Analysis (PCA) uit. PCA reduceert de complexiteit van de dataset door een aantal samenhangende variabelen te genereren - de zogeheten principal coponents (PC's). Hierdoor kunnen onderliggende patronen in de data worden opgespoord die niet direct zichtbaar zijn.
 
-```{r linear-dimensional-reduction}
+#### Genen die het meest bijdragen aan PC1 en PC2
+
+De tabel hieronder toont de top 5 genen die het meeste bijdragen aan de eerste vijf PC's. Dit gebeurt door te kijken naar de loadings van de genen - een maat voor hoe sterk een gen bijdraagt aan een bepaalde PC. Zowel positieve als negatieve loadings zijn belangrijk, het zijn namelijk de genen met een hoge absolute waarden die bepalend zijn voor die dimensies. Door deze genen te bekijken, krijgen we inzicht in welke biologische processen of kenmerken belangrijk zijn voor de variatie die de PC's verklaren.
+
+```{r run-pca}
 # PCA uitvoeren op de variabele genen
 pbmc.filtered <- RunPCA(pbmc.filtered, features = VariableFeatures(object = pbmc.filtered))
 
 # Toon de top 5 genen met grootste positieve en negatieve loadings voor PC1-5
 print(pbmc.filtered[["pca"]], dims = 1:5, nfeatures = 5)
+```
 
+```{r pagina_einde_3, results='asis', echo=FALSE}
+cat("\\newpage")
+```
+
+De volgende scatterplot toont de genen die het meeste bijdragen aan de PC1 en PC2 - de eerste twee PC's Op de y-as die je de namen van de genen, en op de x-as de waarde van hun loading op de specifieke PC. Elk punt vertegenwoordigt een gen; hoe verder een punt van nul ligt, hoe sterker dat gen bijdraagt aan de variatie van die PC. Deze visualisatie helpt bij het begrijpen welke genen belangrijk zijn voor de verschillen tussen cellen die door PC1 en PC2 worden weergegeven.
+
+```{r vizdimloadings}
 # Visualiseer de genen die het meest bijdragen aan PC1 en PC2
 VizDimLoadings(pbmc.filtered, dims = 1:2, reduction = "pca")
+```
 
+```{r pagina_einde_4, results='asis', echo=FALSE}
+cat("\\newpage")
+```
+
+#### Visualisatie van cellen in PCA-ruimte (PC1 vs PC2)
+
+Deze scatterplot toont individuele cellen in de ruimte van de eerste twee hoofdcoponenten. Elk punt is een cel, en de positie weerspeigelt de genexpressiepatronen zoals samengevat door PCA. Clusters van cellen in deze grafiek wijzen op vergelijkbare expressieprofielen. Belangrijk om te begrijpen dat de cellen hier nog niet zijn ingedeeld in echte clusters, maar dat het wel alvast een visueel inzicht geeft in mogelijke groepering.
+
+
+
+```{r dimplot-pca}
 # Plot de cellen in PC1 en PC2 ruimte (scatterplot)
 DimPlot(pbmc.filtered, reduction = "pca") + NoLegend()
+```
 
+```{r pagina_einde_5, results='asis', echo=FALSE}
+cat("\\newpage")
+```
+
+#### Heatmap van de eerste hoofdcomponent (PC1) 
+
+Deze heatmap visualiseert de expressie van de 500 meest extreme cellen op PC1. 
+
+- Rijen: individuele cellen
+- Kleuren: mate van genexpressie, waarbij geel een hoge expressie betekent en paars een lage expressie
+- Rechterzijde: een vertivale lijst met genen die sterk bijdragen aan PC1
+
+Het doel van de heatmap is dat het laat zien of er binnen de eerste hoofdcomponent duidelijke expressiepatronen zijn die celgroepen van elkaar onderscheiden. Als je bijvoorbeeld in de kleuren patronen of blokken ziet, duidt dat op onderliggende structuur in de data (zoals subpopulaties van cellen). Dit is belangrijk, omdat PCA alleen nuttig is voor downstream-analyse (clustering) als de componenten ook écht biologisch relevante verschillen tonen.
+
+```{r dimheatmap-1}
 # Heatmap van de eerste PC voor de 500 meest extreme cellen
 DimHeatmap(pbmc.filtered, dims = 1, cells = 500, balanced = TRUE)
+```
 
+Wat opvalt, is dat de heatmap grofweg in twee blokken verdeeld is: een bovenste groep cellen met lage expressie (paars) van bepaalde genen en een onderste groep met juist hoge expressie (geel), en omgekeerd voor andere genen.
+
+Dit suggereert dat PC1 een echte biologische structuur vastlegt, en dus nuttig is voor verdere analyse.
+
+```{r pagina_einde_6, results='asis', echo=FALSE}
+cat("\\newpage")
+```
+
+#### Heatmap van de eerste 15 hoofdcomponenten (PC1 t/m PC15)
+
+In de volgende verzameling van heatmaps worden de eerste 15 PC's weergegeven. Door de PC's op deze manier te inspecteren, krijg je een indruk van welke comnponenten duidelijke patronen of scheidingen tussen celpopulaties laten zien, en welke meer ruis bevatten. Dit helpt bij het selecteren van een geschikt aantal PC's voor de clusering.
+
+```{r dimheatmap-1-tm-15, fig.height=6, fig.width=5}
 # Heatmap van PC1 t/m PC15
 DimHeatmap(pbmc.filtered, dims = 1:15, cells = 500, balanced = TRUE)
+```
+
+Naarmate het componentnummer oploopt neemt vaak de hoeveelheid ruis toe en wordt de bijdrage aan biologisch relevante variatie kleiner. Dit helpt bij het bepalen van een geschikt aantal PC's voor de clustering. Vaak laten de eerste paar PC's (PC1-PC5) duidelijke patronen of kleurverschillen zien tussen celgroepen, terwijl latere componenten vaak minder structuur tonen en minder informatief zijn. Dat is in dit geval ook zo.
+
+```{r pagina_einde_7, results='asis', echo=FALSE}
+cat("\\newpage")
 ```
 
 ## Conclusie en Discussie
