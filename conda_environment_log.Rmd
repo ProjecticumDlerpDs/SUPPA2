@@ -1,0 +1,101 @@
+---
+title: "Opzetten van een nieuwe werkomgeving"
+author: "Jalisa van der Zeeuw"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Inleiding
+Dit document beschrijft de overstap van een `renv`-gebaseerde R-omgeving naar een Conda-omgeving. Deze wijziging is nodig omdat het vervolg van het project gebruikmaakt van zowel **R** als **Python**, waaronder tools zoals **Salmon** en **SUPPA2**. Daarnaast wordt toegelicht hoe het gebruik van deze omgeving bijdraagt aan veilig en reproduceerbaar werken.
+
+### Waarom overstappen naar Conda?
+De oorspronkelijke werkomgeving maakte gebruik van [`renv`], een R-specifiek pakketbeheer- en omgevingsbeheerhulpmiddel. Hoewel `renv` goed werkt voor puur R-gebaseerde projecten, is het minder geschikt wanneer er ook Python-code wordt gebruikt.
+Omdat het vervolg van dit project ook Python-scripts en -tools bevat, is gekozen om over te stappen naar een **Conda-omgeving**. Conda maakt het mogelijk om **zowel R- als Python-paketten** in één reproduceerbare omgeving te beheren.
+
+## Stap 1: Commit en push huidige renv-project
+Voordat de `renv`-omgeving word verwijderd, is het belangrijk om eerst de huidige status van het project op te slaan via Git:
+
+```{bash eval=FALSE}
+git add .
+git commit -m "Laatste commit vóór verwijderen renv"
+git push origin main
+git push school main
+```
+
+## Stap 2: renv deactiveren en verwijderen
+```{r eval=FALSE}
+# deactiveer renv in dit project (voer dit niet automatisch uit)
+renv::deactivate()
+# verwijder renv van je systeem (optioneel)
+renv::uninstall()
+```
+
+```{bash eval=FALSE}
+# verwijder mappen en lockfile
+rm -rf renv/
+rm renv.lock
+```
+
+## Stap 3: Miniconda - installatie
+In deze stap installeren we Miniconda om een conda environment te kunnen gebruiken voor Python en R package management.
+
+**Volg de stappen in de terminal**
+```{bash eval=FALSE}
+# ga naar je home directory op de server (of wanneer je lokaal werkt naar de hoofdmap van het project)
+cd ~
+# download het Miniconda installatie script
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+# run het installatie script in batch modus (-b) om automatisch te installeren
+bash Miniconda3-latest-Linux-x86_64.sh -b
+# sluit de terminal en open een nieuwe om conda te activeren
+# controleer of de installatie is gelukt met:
+conda --version
+# als alles goed is geinstalleerd, krijg je de versie te zien
+```
+
+## Stap 4: Conda environment aanmaken (volgens de module)
+We maken nu een nieuwe Conda-omgeving aan met de naam `suppa2`. Deze omgeving gebruiken we om de pakketten te installeren die nodig zijn in het project.
+```{bash eval=FALSE}
+# maak een nieuwe conda-omgeving aan
+conda create -n suppa2 
+# activeer de omgeving
+conda activate suppa2
+```
+
+**Let op:** Na het activeren van een Conda-omgeving verschijnt de naam ervan (in dit geval ((suppa2)) links in de terminalprompt.
+Zorg dat je in de juiste omgeving werkt, anders kunnen geinstalleerde programma's niet gevonden worden.
+
+
+## Gebruik van `conda activate` en `conda deactivate`
+Wanneer je werkt in een project met Conda, is het belangrijk dat je de juiste omgeving activeert voordat je aan de slag gaat. Hiermee zorg je ervoor dat alle benodigde pakketten beschikbaar zijn.
+
+Je kunt de omgeving activeren met:
+```{bash eval=FALSE}
+conda activate suppa2
+```
+Als je klaar bent met werken, kun je de omgeving netjes afsluiten met:
+```{bash eval=FALSE}
+conda deactivate
+```
+
+### Werken met Conda in scripts vs. RMarkdown
+Wanneer je gebruik maakt van een Conda-omgeving is het belangrijk om te weten wanneer en waar je de omgeving moet activeren. 
+
+In een RMarkdown-bestand hoeft (en werkt) `conda activate` niet binnen een codechunk. Je activeert de omgeving namelijk buiten R, vóór je het RMarkdown-bestand uitvoert, bijvoorbeeld via een terminal waarin je eerst `conda activate <omgeving>` aanroept en daarna `Rscript` of `rmarkdown::render()` gebruikt. Binnen een Rmarkdown-chunk zelf wordt `conda activate` niet herkend, omdat dat een shell-specifiek commando is en RMarkdwn standaard binnen een R-omgeving draait.
+
+Wil je de omgeving juist binnen een script (bijvorbeeld een `.sh`-bestand) activeren, dan moet je dit expliciet aan het begin van dat script opnemen, bijvoorbeeld:
+
+```
+#!/bin/bash
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate mijn_omgeving
+```
+Zo zorg je ervoor dat alle commando's die volgen, binnen de juiste Conda-omgeving worden uitgevoerd. 
+
+## Veilig en bewust werken met Conda-omgevingen
+Conda-omgevingen helpen bij het veilig en bewust werken doordat ze het beheer van software en dependencies voor meerdere programmeertalen, zoals R en Python, mogelijk maken. Door deze omgevingen te gebruiken, wordt het eenvoudiger om analyses betrouwbaar te herhalen en het project overzichtelijk te houden, wat belangrijk is voor de kwaliteit en veiligheid van het onderzoek. De geisoleerde omgevingen zorgen ervoor dat software in het ene project niet zomaar invloed kan hebben op een ander project. Daarnaast maakt Conda het mogelijk om softwareversies gecontroleerd te beheren en omgevingen snel te herstellen bij problemen, doordat je met een environment.yml-bestand previes vastlegt welke pakketten en versies nodig zijn. Hierdoor kan een omgeving eenvoudig opnieuw worden opgebouwd op een andere computer of na een update.
