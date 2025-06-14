@@ -24,10 +24,18 @@ De preprocessing wordt uitgevoerd met behulp van de Seurat-toolkit. Seurat biedt
 Het doel van deze analyse is om uit de VASA-seq data betrouwbare biologische inzichten te verkrijgen door middel van zorgvuldige verwerking en analyse in Seurat. Hierbij ligt de focus op het identificeren van celtypen en celtoestanden, die vervolgens gebruikt kunnen worden voor verdere analyse van alternatieve splicing met SUPPA2.
 
 Het doel van deze analyse is om de volgende deelvraag te beantwoorden:
-*Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?*
+
+**Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?** 
 
 ### Packages laden
-We beginnen met het laden van de benodigde R packages voor de analyse. Deze pakketten zijn nodig voor data-manipulatie (`dplyr`, `tidyr`), visualisatie (`ggplot2`), en het werken met single-cell data (`Seurat`, `Matrix`).
+We beginnen met het laden van de benodigde R packages voor de analyse. Deze packages ondersteunen verschillende onderdelen van de workflow, zoals:
+
+- Data-manipulatie en visualisatie: `dplyr`, `tidyr`, `ggplot`
+- Single-cell analyse: `Seurat`, `Matrix`, `glmGamPoi` (versnelt normalisatie)
+- Bestandsbeheer en paden: `here` (voor padverwijzingen)
+- Kleurenbeheer: `colorspace` (voor controle over kleurenschema's in plots)
+
+Hiermee zijn alle functies beschikbaar voor het uitvoeren en visualiseren van de analyse.
 
 ```{r load_packages, message=FALSE, warning=FALSE}
 # Inladen van benodigde packages
@@ -39,6 +47,7 @@ library(Matrix)
 library(colorspace)
 library(here)
 library(glmGamPoi)
+library(knitr)
 
 # Bepaal data directory dynamisch
 if (dir.exists("/home/data/projecticum/splicing/data")) {
@@ -58,7 +67,13 @@ if(length(missing_files) > 0){
 ```
 
 ### Inladen van metadata
-In deze stap laden we de metadata in voor zowel de features (genen) als de samples (cellen). De featuremetadata bevat bijvoorbeeld de namen en eigenschappen van de genen, terwijl de samplemetadata informatie bevat over de individuele cellen, zoals een cel-ID of celtype. Deze informatie is essentieel om de ruwe read-counts correct te koppelen aan genen en cellen, en vormt dus een onmisbaar onderdeel van de dataset.
+In deze stap laden we de metadata in voor zowel de features (genen) als de samples (cellen). 
+
+De **featuremetadata** bevat informatie over de genen, zoals hun namen en eventuele kenmerken.
+
+De **sample-metadata** bevat gegevens over de individuele cellen, zoals cel-ID of exerimentele condities. 
+
+Deze informatie is essentieel om de ruwe read-counts correct te koppelen aan genen en cellen, en vormt dus een onmisbaar onderdeel van de dataset.
 
 ```{r load_metadata}
 # Stap 3: Lees metadata in met dynamische paden
@@ -67,8 +82,15 @@ samples_metadata <- read.csv(file.path(data_dir, "e85_sample_metadata.csv"))
 ```
 
 ### Inladen van de count matrix
-De ruwe expressiedata van de cellen wordt ingelezen in de vorm van een sparse matrix, waarbij rijen genen voorstellen en kolomen individuele cellen. deze count matrix bevat het aantal reads per gen per cel, en vormt de basis voor de downstream-analyse.
-Met de functie ReadMtx() worden de matrix zelf, de bijbehorende geninformatie (features) en celinformatie (barcodes) gecombineerd tot één structuur. 
+De ruwe expressiedata wordt ingelezen als een sparse matrix, waarbij de rijen genen voorstellen en de kolommen individuele cellen. 
+
+Met de functie `ReadMtx()` worden drie onderdelen gecombineerd tot één structuur:
+
+- de matrix met de tellingen,
+- de bijbehorende feature-metadata (unieke barcodes van fragmenten, ook wel UFI's genoemd),
+- en de sample metadata (barcodes die individuele cellen identificeren).
+
+Deze gecombineerde structuur maakt het mogelijk om de expressiewaarden direct te koppen aan de juisten genen en cellen.
 
 ```{r load_Mtx}
 # Stap 4: Lees count matrix in met dynamische paden
@@ -86,7 +108,7 @@ counts <- ReadMtx(
 ```
 
 ### Aanmaken van het Seurat-object
-De ingelezen count matrix wordt nu omgezet naar een Seurat-object met de functie `CreateSeuratObject()`. Dit object, dat hier wordt opgeslagen onder de naam seurat, bevat de expressiegegevens van de cellen en wordt gebruikt als uitgangspunt voor alle volgende analyses.
+De ingelezen count matrix wordt nu omgezet naar een Seurat-object met de functie `CreateSeuratObject()`. Dit object, dat hier wordt opgeslagen onder de naam seurat, fungeert alas de centrale datastructuur voor de verdere analyse.
 Na het aanmaken wordt het object kort bekeken met `seurat` en `heads(seurat)` om te controleren of het correct is opgebouwd en de data er logisch uitziet.
 
 ```{r create_seurat_object}
@@ -117,7 +139,8 @@ In deze stap maken we verschillende grafieke om de kwaliteit van onze data te be
 - het totaal aantal getelde transcripties (nCount_RNA) 
 - het percentage mitochondriale genen (percent.mt). 
 
-Deze plots helpen om cellen met slechte kwaliteit, zoals cellen met weinig genexpressie of veel mitochondriaal RNA te identificeren. Het percentage mitochondriale genexpressie is een indicatie van de kwaliteit van de cellen; een hoog percentage kan duiden op beschadigde of gestresste cellen. Door deze plots te bekijken, kunnen we bepalen welke cellen geschikt zijn voor verdere analyse.
+Deze kenmerken helpen om cellen met slechte kwaliteit, zoals cellen met weinig genexpressie of veel mitochondriaal RNA te identificeren. Het percentage mitochondriale genexpressie is een indicatie van de kwaliteit van de cellen; een hoog percentage kan duiden op beschadigde of gestresste cellen. 
+Door deze plots te bekijken, kunnen we bepalen welke cellen verwijderd moeten worden voordat we doorgaan met verdere analyse.
 
 ```{r qc_vlnplot, fig.width=11, fig.height=4}
 # Quality Control plots voor features, counts en percent.mt
@@ -126,13 +149,22 @@ VlnPlot(seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
         ncol = 3)
 ```
 
-Vervolgens maken we scatterplots waarbij deze verschillende kwaliteitskenmerken met elkaar vergeleken worden. Door deze kennerken in relatie tot elkaar te bekijken, kunnen we mogelijke verbanden of afwijkingen identificeren die met afzonderlijke visualisaties niet direct zichtbaar zijn. Bijvoorbeeld, een hoge mitochondriale expressie samen met een laag aantal gedetecteerde genen kan duiden op beschadigde cellen. Maar een hoog mitochondriale expressie samen met een hoog aantal gedetecteerde genen, kan weer duiden op doublets. Dit geeft aanwijzingen over eventuele slechte kwaliteit cellen of technische artefacten.
+In de violin plots is zichtbaar dat er variatie bestaat tussen individuele samples (replicaten) binnen de E8.5 dataset. Een aantal samples toont lagere waarden voor zowel nCount_RNA en nFeature_RNA.
+
+
+Vervolgens maken we scatterplots om de relatie tussen verschillende kwaliteitsmaten per cel te visualiseren. Dit helpt bij het opsporen van patronen die kunnen wijzen op lage datakwaliteit of technische artefacten. De volgende combinaties worden geplot:
+
+- `nCount_RNA` versus `percent.mt`: om te zien of een hoog aantal reads samengaat met verhoogde mitochondriale expressie.
+- `nCount_RNA` versus `nFeature_RNA`: om te bekijken of het aantal genen evenredig oploopt met het totaal aantal RNA-fragmenten.
+
 ```{r qc_scatterplots, fig.width=12, fig.height=5}
 # QC scatterplots
 plot1 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
 plot1 + plot2
 ```
+
+De scatterplots laten zien dat de meeste celen lage mitochondriale expressie combineren met een gemiddeld tot laag aantal reads - wat een goed teken is. Er zijn weinig cellen met een afwijkend profiel (bijvoorbeeld hoge `pecent.mt` bij hoge `nCount_RNA`), wat erop wijst dat er waarschijnlijk weinig doublets of beschadigde cellen in de dataset aanwezig zijn.
 
 ### Filtering 
 Om de kwaliteit van de dataset de waarborgen, worden de cellen gefiltert. De cellen die tussen de 200 en 2500 genen hebben en minder dan 6% mitochondriale expressie worden behouden. Deze gefilterde dataset, hierna genoemd seurat.filtered, wordt gebruikt voor downstream analyse. De gekozen grenzen voor filtering zijn gebaseerd op basis van de zojuist gemaakte plots, rekening houdend met de biologische aard van de data (muizen embryo's).
@@ -151,6 +183,7 @@ Tegelijk selecteert `SCTransform` automatisch de meest variabele genen (HVG's), 
 
 Hieronder zien we het aantal HVG's dat SCTransform heeft geselecteerd en de top10.
 Vervolgens zie je plots met alle genen, waarbij de hoog variable genen rood zijn gemarkeerd. Deze HVG's worden meegenomen voor derere analyse. Daarnaast wordt dezelfde plot getoond, maar dan met de top10 HVG's gelabeld, zodat je direct de belangrijkste variabele genen kunt herkennen.
+
 ```{r normalization_and_scaling}
 # Normalisatie, selectie variabele genen, regressie op mitochondriale genexpressie & dataschaling
 seurat.filtered <- SCTransform(seurat.filtered, vars.to.regress = "percent.mt", verbose = FALSE)
@@ -175,6 +208,10 @@ Plot1 <- VariableFeaturePlot(seurat.filtered)
 Plot1 + LabelPoints(plot = Plot1, points = top10, repel = TRUE)
 ```
 
+De hoog variabele genen liggen verspreid en niet samengeklonterd. Dit is precies de bedoeling om biologische verschillen in de data de identificeren.
+
+De top 10 hoog variabele genen die SCTransform seleceert, bevat onder andere hemoglobine-gerelateerde genen, als genen die betrokken zijn bij spierstructuur.
+
 ### Principal Component Analysis (PCA)
 We voeren een PCA uit op de hoogst variabele genen om de belangrijkste variaties in de data te identificeren. PCA reduceert de hoge dimensies van de dataset naar een kleiner aantal samengestelde variabelen, genaamd principal components (PC's). Met dimensies wordt bedoeld het aantal variabelen waarop de cellen worden geanalyseerd. Elke dimensie komt in dit geval overeen met de expressiewaarde van een gen in een cel.Hierdoor wordt het de data eenvoudiger te visualiseren en interpreteren. De eerste paar principal components bevatten de meeste informatie over de variatie tussen cellen. 
 ```{r run_pca}
@@ -198,19 +235,24 @@ VizDimLoadings(seurat.filtered, dims = 1:2, reduction = "pca")
 
 De Dimplot hieronder toont de cellen geprojecteerd in de ruimte van de belangrijkste hoofdcomponenten (PC's). Elke stip vertegenwoordigt een cel, en de positionering laat zien hoe vergelijkbaar de cellen zijn qua genexpressieprofiel. Cellen die dicht bij elkaar liggen, hebben een vergelijkbaar expressiepatroon, terwijl cellen die ver van elkaar liggen, verschillen in hun genexpressie.
 Deze visualisatie geeft een eerste in druk van de grote structuren en mogelijke clusters in de dataset. Dit is een globale kwaliteitscheck om te zien of er structuur in de data zit. Stel dat er helemaal geen groepen te zien zijn, dan is dat verdacht. 
+
 ```{r pca_dimplot, fig.width=8, fig.height=5}
 # Visualisatie van cellen in PC-ruimte
 DimPlot(seurat.filtered, reduction = "pca")
 ```
+
+De plot bevestigt dat de cellen verschillende expressieprofielen hebben en in clusters zijn gegroepeerd. Dit ondersteunt dat de data biologische variatie bevat, wat een goede basis is voor verdere analyses.
+
 Vervolgens wordt er een ElbowPlot gemaakt om te bepalen hoeveel PC's worden meegenomen voor verdere analyse, clustering en UMAP. Dee plot helpt kiezen hoeveel PC's informatief genoeg zijn om te behouden. Op de x-as zie je het nummer van de PC, en op de y-as de de hoeveelheid variantie die elk PC verklaard (hoeveel informatie die PC bevat). De lijn daalt geleidelijk: de eerste PC's bevatten veel informatie, latere steeds minder.
 Er wordt gekeken naar het punt waarop de lijn afvlakt - daar ontstaat een soort knik, ookwel de elleboog genoemd. Dat punt geeft aan hoeveel PC's er het beste kunnen worden meegenomen. 
-
-Er is besloten om PC1 t/m PC8 mee te nenen voor verdere analyse.
 
 ```{r pca_elbowplot, fig.width=10, fig.width=5}
 # PCA analyse plotten
 ElbowPlot(seurat.filtered)
 ```
+
+Op basis van de ElbowPlot is gekozen om PC1 tot en met PC8 mee te nemen voor verdere analyse, omdat hier de informatie duidelijk afvlakt.
+
 
 ### Clustering van cellen
 De volgende stap is het groeperen van cellen die vergelijkbare genexpressieprofielen hebben. Dit noemen we clustering.
@@ -230,18 +272,33 @@ umap_plot <- DimPlot(seurat.filtered, reduction = "umap", label = TRUE)
 print(umap_plot)
 ```
 
-*dit moet ik nog toevoegen*
+Voor verdere analyse heb ik ervoor gekozen om clusters 2 en 3 te selecteren, omdat deze clusters duidelijk gescheiden en relatief rond van vorm zijn, wat wijst op goed onderscheidbare celpopulaties.
+
 ```{r find_top3_markers}
+# De clusters die je kiest voor verder onderzoel
+chosen_clusters <- c(2,3)
+
 # Bekijk top 3 markergenen per cluster
 markers_all <- FindAllMarkers(seurat.filtered, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 
+# Selecteer top 3 marker-genen per cluster
 top3_markers_per_cluster <- markers_all %>%
   group_by(cluster) %>%
   slice_max(order_by = avg_log2FC, n = 3)
 
-print(top3_markers_per_cluster, n = Inf)
+# Filter alleen de gekozen clusters
+top3_selected <- top3_markers_per_cluster %>%
+  filter(cluster %in% chosen_clusters) %>%
+  select(cluster, gene, avg_log2FC) # alleen relevantie kolommen
+
+# Tabel netjes printen in Rmd
+kable(top3_selected, caption = "Top 3 marker-genen per gekozen cluster")
 ```
 
+De tabel hierboven toont de top 3 marker-genen per gekozen cluster (2 en 3), geselecteerd op basis van de hoogste log2 fold change. De sterke expressie van deze genen in de clusters geeft aanwijzingen over de identiteit en functie van de cellen.
+
+- Cluster 2 wordt onder andere gekenmerkt door hoge expressie van Espr1, Grhl2 en Epcam, genen die betrokken zijn bij epitheliale cel eigenschappen en celadhesie. Dit doet vermoeden dat cluster 2 mogelijk epitheel-achtige cellen bevat.
+- Cluster 3 toont sterke expressie van Pcdh19, Dll1 en Gm14226, genen die geassocieerd zijn met cel-cel communicatie en signaaltransductie, wat kan duideb op een meer differentiatie- of communicatiefunctie van deze cellen.
 
 ```{r select_top_genes_clusters_2_3}
 # Vergelijk clusters 2 en 3: selecteer top 15 genen per cluster
@@ -254,7 +311,7 @@ top_genen <- markers_all %>%
 ```
 
 
-```{r top15_and_overlap_clusters_2_3}
+```{r top15_and_overlap_clusters_2_3, echo=FALSE, message=FALSE, results='hide'}
 # Top 15 genen per cluster apart
 top_2 <- markers_all %>% filter(cluster == 2) %>% top_n(15, avg_log2FC) %>% pull(gene)
 top_3 <- markers_all %>% filter(cluster == 3) %>% top_n(15, avg_log2FC) %>% pull(gene)
@@ -264,7 +321,9 @@ overlap <- intersect(top_2, top_3)
 print(overlap)
 ```
 
+Er is geen overlap gevonden tussen de top 15 marker-genen van cluster 2 en 3, wat suggereert dat deze clusters duidelijke verschillende expressieprofielen hebben.
 
+Om de expressiepatronen van cluster 2 en 3 verder te onderzoeken, wordt er een subset van deze clusters gemaakt. Vervolgens worden de top genen gecombineerd uit beide clusters voor verdere visualisatie
 
 ```{r subset_clusters_2_3}
 # Maak subset van alleen cluster 2 en 3
@@ -274,33 +333,42 @@ seurat_2_3 <- subset(seurat.filtered, idents = c(2,3))
 top_genes <- c(top_2, top_3) %>% unique()
 ```
 
-
+De Volgende dotplot toont de expressie van de top marker-genen van clusters 2 en 3. Elke stip geeft aan hoeveel cellen in een cluster het gen tot expressie brengen (grootte van de stip) en de gemiddelde expressieniveau (kleur). Deze visualisatie helpt om snel verschillen en overeenkomsten in genexpressie tussen de clusters te identificeren
 
 ```{r dotplot_clusters_2_3, fig.width=10, fig.height=5}
 # Maak dotplot voor clusters 2 en 3 met geselecteerde genen
 DotPlot(seurat_2_3, features = top_genes) + RotatedAxis()
 ```
 
+De berekende overlap tussen de top 15 genen van cluster 2 en 3 was nul. Dit wordt bevestigd in de dotplot, waar geen genen zichtbaar zijn die in beide clusters sterk tot expressie komen. Dit benadrukt dat de clusters duidelijke en onderscheidbare expressieprofielen hebben, war de keuze om ze verder te vergelijken ondersteunt.
 
 
-## Conclusie en Discussie *mis nog niet af, moet nog worden toegevoegd en herschreven*
+## Conclusie en Discussie ##
 
-Normaliseren: SCTransform is vooral beter als je data complexer is, met variabele sequencing depth, veel lage expressiewaarden en technische variatie — precies het geval bij VASA-seq. Daarom zie je in moderne pipelines dat SCTransform de voorkeur krijgt.
+### Methodologische keuzes ###
 
-HVG = 3000: In embryonale datasets is de celdiversiteit doorgaans hoger vanwege de aanwezigheid van diverse celtypes en ontwikkelingsstadia. Dit zorgt voor complexere en subtielere veranderingen in genexpressiepatronen. Door meer variabele genen te selecteren (3000 in plaats van de gebruikelijke 2000) kunnen we deze biologische diversiteit van embryonale ontwikkeling beter vastleggen. Bovendien helpt een grotere genenset om zwakkere signalen op te vangen en verbetert het de detectie van fijne celtypen en subpopulaties.
+**Normalisatie en filtering**
 
-Na het toepassen van SCTransform() is automatisch een selectie gemaakt van de meest variabele genen binnen de dataset. Dit zijn genen waarvan de expressie sterk verschilt tussen cellen, en ze zijn belangrijk omdat ze vaak bijdragen aan het onderscheiden van celtypes in latere analyses (zoals clustering of trajectanalyse).
-Om te controleren of deze selectie biologisch logisch is — en niet alleen technische ruis bevat — heb ik de top 10 meest variabele genen bekeken. Deze controle geeft inzicht in welke genen de meeste bijdrage leveren aan de variatie tussen cellen in de dataset.
-De topgenen bevatten onder andere:
+Voor de normalisatie van de VASA-seq data is gekozen voor `SCTranscorm()`. Deze methode is naar mijn idee geschikter dan klassieke methoden voor datasets met complexe technische variatie als variabele sequencingdiepte en veel mitochondriaal RNA, wat typisch is voor VASA-seq. SCTransform() corrigeert voor deze factoren zonder belangrijke biologische signalen te verliezen. 
+De filtering van cellen vond plaats op basis van het aantal gedetecteerde genen (tussen 200 en 2500) en het percentage mitochondriaal RNA (maximaal 6%). De 6%-grens heb ik iets boven de standaard 5% gezet die bij standaard scRNA-seq technieken wordt gebruikt. Hier heb ik twee redenen voor: ten eerste detecteert VASA-seq ook non-polyadenylerend RNA, waardoor het aandeel zichtbaar mitochondriaal RNA in gezonde cellen toeneemt. Het klopt dat VASA-seq ook meer niet-mitochondriaal RNA meet, maar toch neemt het mitochondriale deel relatief méér toe. Dat komt omdat mitochondriaal RNA vaak oververtegenwoordigd is, en het mitochondriaal RNA stabieler is en makkelijker te meten. Ten tweede doen we onderzoek naar embryonale cellen, waarin mitochondriale activiteit van nature verhoogd is vanwege snelle celgroei en differentiatieprocessen. Een strengere filter zou ertoe kunnen leiden dat biologisch relevante cellen ten onrechte uit de dataset worden verwijderd. Vandaar de keuze voor een iets ruimere grens.
 
-- Hemoglobinegenen (Hbb-bh1, Hbb-y, Hba-x): typisch actief in vroege rode bloedcellen in het embryo
+**Selectie van hoof variabele genen**
 
-- Spier- en hartgerelateerde genen (Ttn, Myh6, Actc1, Ryr2): betrokken bij hartontwikkeling, wat past bij cellen in deze embryonale fase
+Er is gekozen voor een relatief grote set van 3000 hoog variabele genen. Dit is belangrijk omdat embryonale datasets vaak een hoge celdiversiteit kennen en subtiele verschillen in genexpressie vertonen. Door meer genen mee te neen, wordt de biologische variatie beter vastgelegd.
 
-- Genen betrokken bij transport en metabolisme (zoals Apob, Cubn, Slc8a1): kunnen wijzen op actieve cellen met functies in vet- of iontransport
+**Clustering en selectie van clusters voor SUPPA2-analyse**
 
-extra regressie stap. genen:
-Tijdens de normalisatie met SCTransform() heb ik het percentage mitochonderiale genexpressie (percent.mt) meegenomen als regressiefactor. dit betekend niet dat mitochondriale genen zijn verwijderd, maar dat hun in vloed op de expressieniveaus van andere genen is gecorrigeerd.zo wordt voorkomen dat variatie door celstress of technische redenen de clustering en downsstream analyses beinvloed. 
+De eerste 8 principal components zijn gebruikt voor clustering, gebaseerd op een Elbowplot die lat zien dat deze PC’s de meeste informatie bevatten. Voor verdere analyse zijn clusters 2 en 3 gekozen, omdat deze clusters relatief groot, rond van vorm en goed gescheiden zijn in de UMAP-ruimte. Dit maakt ze naar mijn mening geschikt om duidelijke verschillen in alternatieve splicing te onderzoeken met SUPPA2. Daarnaast is voorgesteld om later ook clusters te onderzoeken die dichter bij elkaar liggen, zoals cluster 1 en 3, om te testen hoe gevoelig SUPPA2 is voor subtielere splicingverschillen.
 
+### Samenvattende conclusie ###
+
+Met deze workflow is het gelukt om VASA-seq data op een passende manier te verwerken, waarbij rekening is gehouden met de specifieke technische en biologische kenmerken van de dataset. SCTransform() normaliseerde de data effectief, en de gekozen filtercriteria zorgen voor een betrouwbare selectie van kwalitatief goede cellen.
+De clustering resulteerde in biologische groepen die gebruikt kunnen worden voor splicing-analyse met SUPPA2. Door bewust clusters te kiezen die duidelijk verschillen, wordt de kans vergroot om relevante alternatieve splicingverschillen te detecteren. Daarnaast biedt deze aanpak ook mogelijkheden voor vervolgonderzoek gericht op het detecteren van subtielere verschillen. 
+Tot slot is de expressiematrix geëxporteerd en zijn de cellen voorzien van clusterlabels. Deze informatie vormt de basis om per cluster een splicingprofiel op te bouwen, maar vereist nog een tussenstap: de expressiegegevens moeten eerst worden geconverteerd naar een formaat dat geschikt is voor input voor SUPPA2. Die omzetting – samen met de toepassing van SUPPA2 zelf – wordt verder besproken bij de volgende deelvraag.
+Kortom, deze analyse beantwoord de eerste deelvraag: 
+
+**Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?**
+
+De workflow met SCTransform normalisatie, gerichte filtering en clustering levert celgroepen op die inhoudelijk geschikt zijn voor splicinganalyse. Na export en conversie vormt deze output een bruikbare basis voor verdere verwerking met SUPPA2. 
 
 
