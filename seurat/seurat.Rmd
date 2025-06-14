@@ -8,6 +8,10 @@ output:
     number_sections: true
     fig_width: 5
     fig_height: 4
+    latex_engine: xelatex
+header-includes: 
+- \usepackage{float}
+- \usepackage{placeins}
 ---
 
 ```{r setup, include=FALSE}
@@ -48,6 +52,7 @@ library(colorspace)
 library(here)
 library(glmGamPoi)
 library(knitr)
+library(kableExtra)
 
 # Bepaal data directory dynamisch
 if (dir.exists("/home/data/projecticum/splicing/data")) {
@@ -134,22 +139,25 @@ seurat[["percent.mt"]] <- PercentageFeatureSet(seurat, features = mito.features)
 ```
 
 ### Quality Control visualisaties
-In deze stap maken we verschillende grafieke om de kwaliteit van onze data te beordelen. Met een violin plot (VlnPlot) visualiseren we per cel:
+In deze stap maken we verschillende grafieken om de kwaliteit van onze data te beordelen. Met een violin plot (VlnPlot) visualiseren we per cel:
+
 - het aantal gedetecteerde genen (nFeature_RNA)
+
 - het totaal aantal getelde transcripties (nCount_RNA) 
+
 - het percentage mitochondriale genen (percent.mt). 
 
 Deze kenmerken helpen om cellen met slechte kwaliteit, zoals cellen met weinig genexpressie of veel mitochondriaal RNA te identificeren. Het percentage mitochondriale genexpressie is een indicatie van de kwaliteit van de cellen; een hoog percentage kan duiden op beschadigde of gestresste cellen. 
 Door deze plots te bekijken, kunnen we bepalen welke cellen verwijderd moeten worden voordat we doorgaan met verdere analyse.
 
-```{r qc_vlnplot, fig.width=11, fig.height=4}
+```{r qc_vlnplot, fig.width=11, fig.height=4, fig.cap="Quality control met violinplots voor het aantal gedetecteerde genen (nFeature_RNA), totale reads (nCount_RNA) en mitochondriaal RNA percentage (percent.mt) per cel."}
 # Quality Control plots voor features, counts en percent.mt
 VlnPlot(seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
         layer = "counts",
         ncol = 3)
 ```
 
-In de violin plots is zichtbaar dat er variatie bestaat tussen individuele samples (replicaten) binnen de E8.5 dataset. Een aantal samples toont lagere waarden voor zowel nCount_RNA en nFeature_RNA.
+In Figuur 1 is te zien dat er variatie bestaat tussen individuele samples (replicaten) binnen de E8.5 dataset. Een aantal samples toont lagere waarden voor zowel nCount_RNA en nFeature_RNA.
 
 
 Vervolgens maken we scatterplots om de relatie tussen verschillende kwaliteitsmaten per cel te visualiseren. Dit helpt bij het opsporen van patronen die kunnen wijzen op lage datakwaliteit of technische artefacten. De volgende combinaties worden geplot:
@@ -157,14 +165,15 @@ Vervolgens maken we scatterplots om de relatie tussen verschillende kwaliteitsma
 - `nCount_RNA` versus `percent.mt`: om te zien of een hoog aantal reads samengaat met verhoogde mitochondriale expressie.
 - `nCount_RNA` versus `nFeature_RNA`: om te bekijken of het aantal genen evenredig oploopt met het totaal aantal RNA-fragmenten.
 
-```{r qc_scatterplots, fig.width=12, fig.height=5}
+
+```{r qc_scatterplots, fig.width=12, fig.height=5, fig.cap="Scatterplots ter controle van kwaliteit: percentage mitochondriaal RNA versus RNA-hoeveelheid, en RNA-hoeveelheid versus aantal gedetecteerde genen."}
 # QC scatterplots
 plot1 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(seurat, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
 plot1 + plot2
 ```
 
-De scatterplots laten zien dat de meeste celen lage mitochondriale expressie combineren met een gemiddeld tot laag aantal reads - wat een goed teken is. Er zijn weinig cellen met een afwijkend profiel (bijvoorbeeld hoge `pecent.mt` bij hoge `nCount_RNA`), wat erop wijst dat er waarschijnlijk weinig doublets of beschadigde cellen in de dataset aanwezig zijn.
+In Figuur 2 zien we dat de meeste cellen lage mitochondriale expressie combineren met een gemiddeld tot laag aantal reads - wat een goed teken is. Er zijn weinig cellen met een afwijkend profiel (bijvoorbeeld hoge `pecent.mt` bij hoge `nCount_RNA`), wat erop wijst dat er waarschijnlijk weinig doublets of beschadigde cellen in de dataset aanwezig zijn.
 
 ### Filtering 
 Om de kwaliteit van de dataset de waarborgen, worden de cellen gefiltert. De cellen die tussen de 200 en 2500 genen hebben en minder dan 6% mitochondriale expressie worden behouden. Deze gefilterde dataset, hierna genoemd seurat.filtered, wordt gebruikt voor downstream analyse. De gekozen grenzen voor filtering zijn gebaseerd op basis van de zojuist gemaakte plots, rekening houdend met de biologische aard van de data (muizen embryo's).
@@ -181,8 +190,7 @@ Normalisatie zorgt ervoor dat verschillen in sequencing-diepte tussen cellen wor
 Dataschaling brengt de genexpressiewaarden op een vergelijkbaar schaalnivuea, wat belangrijk is voor de downstream methoden (PCA en clustering).
 Tegelijk selecteert `SCTransform` automatisch de meest variabele genen (HVG's), wat belangrijk is voor de downstream analyses. De hoog variabele genen zijn genen die tussen cellen sterk verschillen in expressie, en geven ons de meeste informatie. Op basis van deze informatie kunnen we verschillen in celtypen of toestanden onderscheiden.
 
-Hieronder zien we het aantal HVG's dat SCTransform heeft geselecteerd en de top10.
-Vervolgens zie je plots met alle genen, waarbij de hoog variable genen rood zijn gemarkeerd. Deze HVG's worden meegenomen voor derere analyse. Daarnaast wordt dezelfde plot getoond, maar dan met de top10 HVG's gelabeld, zodat je direct de belangrijkste variabele genen kunt herkennen.
+In Figuur 3 zie je de genen die als hoog variabel zijn geselecteerd door `SCTransform()`. De rood gemarkeerde punten zijn de hoogst variabele genen in de dataset; deze worden gebruikt voor downstream analyses. De top 10 genen zijn gelabeld, zodat direct zichtbaar is welke genen de grootste bijdrage leveren aan de variatie tussen cellen.
 
 ```{r normalization_and_scaling}
 # Normalisatie, selectie variabele genen, regressie op mitochondriale genexpressie & dataschaling
@@ -190,16 +198,7 @@ seurat.filtered <- SCTransform(seurat.filtered, vars.to.regress = "percent.mt", 
 DefaultAssay(seurat.filtered) <- "SCT"
 ```
 
-```{r variable_genes_overview}
-# Toon hoeveel variabele genen er geselecteerd zijn
-length(VariableFeatures(seurat.filtered))
-
-# 10 meest variabele genen uitzoeken 
-top10 <- head(VariableFeatures(seurat.filtered), 10)
-print(top10)
-```
-
-```{r visualize_hvg, fig.width=12, fig.height=5}
+```{r visualize_hvg, fig.width=12, fig.height=5, fig.cap = "Visualisatie van de hoogst variabele genen in de dataset, met labels voor de top 10 meest variabele genen."}
 # Controleer of variabele genen beschikbaar zijn
 top10 <- head(VariableFeatures(seurat.filtered), 10)
 
@@ -214,12 +213,22 @@ De top 10 hoog variabele genen die SCTransform seleceert, bevat onder andere hem
 
 ### Principal Component Analysis (PCA)
 We voeren een PCA uit op de hoogst variabele genen om de belangrijkste variaties in de data te identificeren. PCA reduceert de hoge dimensies van de dataset naar een kleiner aantal samengestelde variabelen, genaamd principal components (PC's). Met dimensies wordt bedoeld het aantal variabelen waarop de cellen worden geanalyseerd. Elke dimensie komt in dit geval overeen met de expressiewaarde van een gen in een cel.Hierdoor wordt het de data eenvoudiger te visualiseren en interpreteren. De eerste paar principal components bevatten de meeste informatie over de variatie tussen cellen. 
+
+In figuur 4 zie je een VizDimLoading plot dat de genen toont die het meest bijdragen aan de geselecteerde principal components (PC's), in dit geval PC1 en PC2.
+Elke stip vertegenwoordigt een gen en de positie op de x-as geeft de bijdrage (loading) van dat gen aan de PC. Genen aan de uiteinden van de assen (van de 0 af) dragen het sterkst bij aan de variatie in die PC. De genen links van 0 dragen daarbij negatief bij, rechts van de 0 positief - dat betekent dat deze genen in verschillende richtingen bijdragen aan de scheiding van de cellen. De genen met positieve en negateve bijdragen hebben tegenovergestelde expressiepatronen in de cellen: als genen met een positieve bijdrage hoog tot expressie komen in een groep cellen, zullen de genen met negatieve bijdrage juist laag tot expressie komen, en andersom.
+
 ```{r run_pca}
 seurat.filtered <- RunPCA(seurat.filtered, features = VariableFeatures(seurat.filtered))
 ```
 
-De volgened plot toont de genen die het meest bijdragen aan de geselecteerde principal components (PC's), in dit geval PC1 en PC2.
-Elke stip vertegenwoordigt een gen en de positie op de x-as geeft de bijdrage (loading) van dat gen aan de PC. Genen aan de uiteinden van de assen (van de 0 af) dragen het sterkst bij aan de variatie in die PC. De genen links van 0 dragen daarbij negatief bij, rechts van de 0 positief - dat betekent dat deze genen in verschillende richtingen bijdragen aan de scheiding van de cellen. De genen met positieve en negateve bijdragen hebben tegenovergestelde expressiepatronen in de cellen: als genen met een positieve bijdrage hoog tot expressie komen in een groep cellen, zullen de genen met negatieve bijdrage juist laag tot expressie komen, en andersom.
+\FloatBarrier
+
+```{r pca_loadings_plot, fig.width=10, fig.height=5, fig.cap="Belangrijkste genen die bijdragen aan de eerste twee principal components (PC1 en PC2)", fig.pos="H"}
+VizDimLoadings(seurat.filtered, dims = 1:2, reduction = "pca")
+```
+
+\FloatBarrier
+
 
 Om een inzicht te krijgen in welke biologische processen of celtypen de dimensie eigenlijk presenteert, kun je informatie zoeken over de genen die hier worden weergeven:
 
@@ -229,53 +238,68 @@ De genen die negatief bijdragen aan PC1 zijn voornamelijk gerelateerd aan rode b
 
 Het opzoeken van de genen die bijdragen aan PC's helpt je om je data biologisch te interpreteren, waardoor je analyses meer betekenis krijgen.
 
-```{r pca_loadings_plot, fig.width=10, fig.height=5}
-VizDimLoadings(seurat.filtered, dims = 1:2, reduction = "pca")
-```
+Figuur 5 toont de cellen geprojecteerd in de ruimte van de belangrijkste hoofdcomponenten (PC's). Elke stip vertegenwoordigt een cel, en de positionering laat zien hoe vergelijkbaar de cellen zijn qua genexpressieprofiel. Cellen die dicht bij elkaar liggen, hebben een vergelijkbaar expressiepatroon, terwijl cellen die ver van elkaar liggen, verschillen in hun genexpressie.
+Deze visualisatie geeft een eerste indruk van de grote structuren en mogelijke clusters in de dataset. Dit is een globale kwaliteitscheck om te zien of er structuur in de data zit. Stel dat er helemaal geen groepen te zien zijn, dan is dat verdacht. 
 
-De Dimplot hieronder toont de cellen geprojecteerd in de ruimte van de belangrijkste hoofdcomponenten (PC's). Elke stip vertegenwoordigt een cel, en de positionering laat zien hoe vergelijkbaar de cellen zijn qua genexpressieprofiel. Cellen die dicht bij elkaar liggen, hebben een vergelijkbaar expressiepatroon, terwijl cellen die ver van elkaar liggen, verschillen in hun genexpressie.
-Deze visualisatie geeft een eerste in druk van de grote structuren en mogelijke clusters in de dataset. Dit is een globale kwaliteitscheck om te zien of er structuur in de data zit. Stel dat er helemaal geen groepen te zien zijn, dan is dat verdacht. 
+\FloatBarrier
 
-```{r pca_dimplot, fig.width=8, fig.height=5}
+```{r pca_dimplot, fig.width=8, fig.height=5, fig.pos="H", fig.cap= "Verdeling van cellen op basis van de eerste twee principal components (PC1 en PC2)"}
 # Visualisatie van cellen in PC-ruimte
 DimPlot(seurat.filtered, reduction = "pca")
 ```
 
+\FloatBarrier
+
 De plot bevestigt dat de cellen verschillende expressieprofielen hebben en in clusters zijn gegroepeerd. Dit ondersteunt dat de data biologische variatie bevat, wat een goede basis is voor verdere analyses.
 
-Vervolgens wordt er een ElbowPlot gemaakt om te bepalen hoeveel PC's worden meegenomen voor verdere analyse, clustering en UMAP. Dee plot helpt kiezen hoeveel PC's informatief genoeg zijn om te behouden. Op de x-as zie je het nummer van de PC, en op de y-as de de hoeveelheid variantie die elk PC verklaard (hoeveel informatie die PC bevat). De lijn daalt geleidelijk: de eerste PC's bevatten veel informatie, latere steeds minder.
+Vervolgens wordt er een ElbowPlot gemaakt om te bepalen hoeveel PC's worden meegenomen voor verdere analyse, clustering en UMAP, zie Figuur 6. De plot helpt kiezen hoeveel PC's informatief genoeg zijn om te behouden. Op de x-as zie je het nummer van de PC, en op de y-as de de hoeveelheid variantie die elk PC verklaard (hoeveel informatie die PC bevat). De lijn daalt geleidelijk: de eerste PC's bevatten veel informatie, latere steeds minder.
 Er wordt gekeken naar het punt waarop de lijn afvlakt - daar ontstaat een soort knik, ookwel de elleboog genoemd. Dat punt geeft aan hoeveel PC's er het beste kunnen worden meegenomen. 
 
-```{r pca_elbowplot, fig.width=10, fig.width=5}
+\FloatBarrier
+
+```{r pca_elbowplot, fig.width=6, fig.height=4, fig.pos="H", fig.cap="Elbow plot voor het selecteren van het aantal PC's", fig.align='left'}
 # PCA analyse plotten
 ElbowPlot(seurat.filtered)
 ```
 
-Op basis van de ElbowPlot is gekozen om PC1 tot en met PC8 mee te nemen voor verdere analyse, omdat hier de informatie duidelijk afvlakt.
+\FloatBarrier
+
+Op basis van de ElbowPlot in Figuur 6 gekozen om PC1 tot en met PC8 mee te nemen voor verdere analyse, omdat hier de informatie duidelijk afvlakt.
 
 
 ### Clustering van cellen
 De volgende stap is het groeperen van cellen die vergelijkbare genexpressieprofielen hebben. Dit noemen we clustering.
 Clustering helpt om biologisch relevante celtypes of -toestanden te onderscheiden zonder vooraf te weten wat die precies zijn. 
 Door te clusteren krijgen we inzicht in de biologische structuur van de data. De clusters vormen de basis voor vervolganalyse, zoals:
+
 - het herkennen en benoemen van celtypes,
+
 - het ontdekken van nieuwe of zeldzame celpopulaties,
+
 - of het vergelijken van celgroepen tussen condities.
 
-```{r clustering_umap}
+In Figuur 7 wordt het resultaat van de clustering gevisualiseerd met behulp van een UMAP-plot. Hierin worden cellen weergegeven in een tweedimensionale ruimte waarbij cellen met vergelijkbare genecpressie dicht bij elkaar liggen. Elke kleur correspondeert met een cluster die mogelijk een specifiek celtype of toestand representeert.
+
+\FloatBarrier
+
+```{r clustering_umap, fig.width=9, fig.height=6, fig.align='left', fig.cap="UMAP-plot met clusters"}
 # vind buren, cluster cellen, bereken UMAP en plot het resultaat
 seurat.filtered <- FindNeighbors(seurat.filtered, dims = 1:8)
 seurat.filtered <- FindClusters(seurat.filtered, resolution = 0.5)
 seurat.filtered <- RunUMAP(seurat.filtered, dims = 1:8)
-
-umap_plot <- DimPlot(seurat.filtered, reduction = "umap", label = TRUE)
-print(umap_plot)
+DimPlot(seurat.filtered, reduction = "umap", label = TRUE)
 ```
 
-Voor verdere analyse heb ik ervoor gekozen om clusters 2 en 3 te selecteren, omdat deze clusters duidelijk gescheiden en relatief rond van vorm zijn, wat wijst op goed onderscheidbare celpopulaties.
+\FloatBarrier
+
+Voor verdere analyse heb ik ervoor gekozen om clusters 2 en 3 te selecteren, omdat deze clusters duidelijk gescheiden en relatief rond van vorm zijn, wat wijst op goed onderscheidbare celpopulaties. 
+
+Om de kenmerken van deze clusters beter te begrijpen, wordt de focus gelegd op de belangrijkste marker-genen die in deze groepen het sterkst tot expressie komen.
+
+Tabel 1 toont de top 3 marker-genen per gekozen cluster (2 en 3), geselecteerd op basis van de hoogste log2 fold change. De sterke expressie van deze genen in de clusters geeft aanwijzingen over de identiteit en functie van de cellen.
 
 ```{r find_top3_markers}
-# De clusters die je kiest voor verder onderzoel
+# De clusters die je kiest voor verder onderzoek
 chosen_clusters <- c(2,3)
 
 # Bekijk top 3 markergenen per cluster
@@ -292,13 +316,13 @@ top3_selected <- top3_markers_per_cluster %>%
   select(cluster, gene, avg_log2FC) # alleen relevantie kolommen
 
 # Tabel netjes printen in Rmd
-kable(top3_selected, caption = "Top 3 marker-genen per gekozen cluster")
+kable(top3_selected, caption = "Top 3 marker-genen per gekozen cluster") %>%
+  kable_styling(position = "left", latex_options = "hold_position")
 ```
 
-De tabel hierboven toont de top 3 marker-genen per gekozen cluster (2 en 3), geselecteerd op basis van de hoogste log2 fold change. De sterke expressie van deze genen in de clusters geeft aanwijzingen over de identiteit en functie van de cellen.
+Cluster 2 wordt onder andere gekenmerkt door hoge expressie van Espr1, Grhl2 en Epcam, genen die betrokken zijn bij epitheliale cel eigenschappen en celadhesie. Dit doet vermoeden dat cluster 2 mogelijk epitheel-achtige cellen bevat.
 
-- Cluster 2 wordt onder andere gekenmerkt door hoge expressie van Espr1, Grhl2 en Epcam, genen die betrokken zijn bij epitheliale cel eigenschappen en celadhesie. Dit doet vermoeden dat cluster 2 mogelijk epitheel-achtige cellen bevat.
-- Cluster 3 toont sterke expressie van Pcdh19, Dll1 en Gm14226, genen die geassocieerd zijn met cel-cel communicatie en signaaltransductie, wat kan duideb op een meer differentiatie- of communicatiefunctie van deze cellen.
+Cluster 3 toont sterke expressie van Pcdh19, Dll1 en Gm14226, genen die geassocieerd zijn met cel-cel communicatie en signaaltransductie, wat kan duideb op een meer differentiatie- of communicatiefunctie van deze cellen.
 
 ```{r select_top_genes_clusters_2_3}
 # Vergelijk clusters 2 en 3: selecteer top 15 genen per cluster
@@ -352,7 +376,7 @@ De berekende overlap tussen de top 15 genen van cluster 2 en 3 was nul. Dit word
 Voor de normalisatie van de VASA-seq data is gekozen voor `SCTranscorm()`. Deze methode is naar mijn idee geschikter dan klassieke methoden voor datasets met complexe technische variatie als variabele sequencingdiepte en veel mitochondriaal RNA, wat typisch is voor VASA-seq. SCTransform() corrigeert voor deze factoren zonder belangrijke biologische signalen te verliezen. 
 De filtering van cellen vond plaats op basis van het aantal gedetecteerde genen (tussen 200 en 2500) en het percentage mitochondriaal RNA (maximaal 6%). De 6%-grens heb ik iets boven de standaard 5% gezet die bij standaard scRNA-seq technieken wordt gebruikt. Hier heb ik twee redenen voor: ten eerste detecteert VASA-seq ook non-polyadenylerend RNA, waardoor het aandeel zichtbaar mitochondriaal RNA in gezonde cellen toeneemt. Het klopt dat VASA-seq ook meer niet-mitochondriaal RNA meet, maar toch neemt het mitochondriale deel relatief méér toe. Dat komt omdat mitochondriaal RNA vaak oververtegenwoordigd is, en het mitochondriaal RNA stabieler is en makkelijker te meten. Ten tweede doen we onderzoek naar embryonale cellen, waarin mitochondriale activiteit van nature verhoogd is vanwege snelle celgroei en differentiatieprocessen. Een strengere filter zou ertoe kunnen leiden dat biologisch relevante cellen ten onrechte uit de dataset worden verwijderd. Vandaar de keuze voor een iets ruimere grens.
 
-**Selectie van hoof variabele genen**
+**Selectie van hoog variabele genen**
 
 Er is gekozen voor een relatief grote set van 3000 hoog variabele genen. Dit is belangrijk omdat embryonale datasets vaak een hoge celdiversiteit kennen en subtiele verschillen in genexpressie vertonen. Door meer genen mee te neen, wordt de biologische variatie beter vastgelegd.
 

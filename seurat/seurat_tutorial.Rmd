@@ -23,7 +23,7 @@ Deze tutorial is bedoeld om vertrouwd te raken met de werkwijze van Seurat en de
 
 **Hoe wordt VASA-seq data verwerkt met Seurat om cellen te filteren, clusteren en geschikt te maken voor analyse met SUPPA2?**
 
-Door deze oefenanalyse eerst zelfstandig uit te voeren, kon ik de werking van de Seurat tool beter begrijpen en uiteindelijk toepassing in mijn eigen analyse met VASA-sew data. Deze tutorial vormde daarmee een belangrijk onderdeel van mijn voorbereiding op het beantwoorden van de deelvraag.
+Door deze oefenanalyse eerst zelfstandig uit te voeren, kan ik de werking van de Seurat tool beter begrijpen en uiteindelijk toepassen in mijn eigen analyse met VASA-sew data. Deze tutorial vormt daarmee een belangrijk onderdeel van mijn voorbereiding op het beantwoorden van de deelvraag.
 
 ## Stappen van de workflow
 
