@@ -39,14 +39,15 @@ Hoe kan SUPPA2 worden gebruikt voor de analyse van alternatieve splicing in VASA
 
 ## Benodigdheden
 
-Voor dit project heb je zowel R als Python nodig. SUPPA2 werkt met Pythonm terwijl de pre-processing van de vasa-seq data met R/Seurat gebeurt.
+Voor dit project heb je zowel R als Python nodig. SUPPA2 werkt met Python, terwijl de pre-processing van de vasa-seq data met R/Seurat gebeurt. Daarnaast wordt gebruikgemaakt van Salmon voor transcript quantification vanuit FASTQ-bestanden.
 
 ### Software
 
 - **R** (bij voorkeur versie 4.1 of hoger)
 - **RStudio** (optioneel, maar aanbevolen)
-- **Python** (verzie 3.6 of hoger)
-- **SUPPA2** (installatie via Github: https://github.com/comprna/SUPPA)
+- **Python** (versie 3.6 of hoger)
+- **SUPPA2** (installatie via [Github](https://github.com/comprna/SUPPA))
+- **Salmon** (instalaltie via conda)
 
 ### R-packages
 
@@ -59,23 +60,55 @@ De volgende R-packages worden gebruikt in dit project:
   - `tidyr`
   - `colorspace`
   - `glmGamPoi` (aanbevolen voor snellere normalisatie met SCTranform)
+  - `knitr`
+  - `matrix`
+  - `here`
+  - `kableExtra`
 
-Je kunt alle packages installeren met behulp van renv om de juiste versies te garanderen:
+### Conda-omgeving instellen
 
-```r
-renv::restore()
+Voor dit project wordt gebruikgemaakt van een conda-environment genaamd **suppa2**. Deze bevat de benodigde R- en Python-pakketten.
+
+Stappen:
+
+1. Zorg dat Miniconda is geïnstalleerd. Je kunt het downloaden via: 
+
+[https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html)
+
+Kies de juiste versie voor jouw besturingssysteem (bijvoorbeeld macOS (ARM64) voor Apple Silicon).
+
+2. Clone dit project: 
+```bash
+git clone https://github.com/ProjecticumDlerpDs/SUPPA2.git
+cd SUPPA2
 ```
 
+3. Maak de conda-omgeving aan:
+```bash
+conda create -n suppa2 python=3.10 r-base=4.3
+conda activate suppa2 
+```
+
+4. installeer de tools:
+``` bash
+conda install -c bioconda salmon
+```
+5. Installeer SUPPA2 via Github:
+```bash
+git clone https://github.com/comprna/SUPPA
+```
+
+6. Start R binnen de conda-omgeving en installeer de benodigde R-packages:
 ```r
+install.packages(c("Seurat", "dplyr", "ggplot2", "patchwork",
+                   "tidyr", "colorspace", "knitr", "matrix", "here", "kableExtra"))
+
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
   install.packages("BiocManager")
 }
 
-if (!require("glmGamPoi")) {
-  BiocManager::install("glmGamPoi")
-}
+BiocManager::install("glmGamPoi")
 ```
-
 ---
 
 ## Bestandenstructuur
@@ -108,11 +141,13 @@ projectmap/
 
 De gebruikte VASA-seq data zijn opgeslagen op de HU-server en worden niet allemaal direct opgenomen in deze repository vanwege de bestandsgrootte.
 
-Toegang tot de data kan verkregen worden via de server op het volgende pad:  
+Toegang tot de data kan verkregen worden via de server op het volgende pad: 
 
 `/home/data/projecticum/splicing/data`  
 
 Neem contact op met de projectleider of beheerder voor toegangsinformatie en rechten.
+
+De ruwe data die is gebruikt voor de seurat tutorial zijn afkomstig van [GEO (Satijalab)](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html)
 
 **Opmerkingen:**
 

@@ -34,7 +34,7 @@ while read -r SRR; do
     echo "prefetching $SRR..."
     prefetch "$SRR"
     
-    # Zet .sra om aar FASTQ met fasterq-dump
+    # Zet .sra om naar FASTQ met fasterq-dump
     echo "Converting $SRR to FASTQ..."
     fastq-dump "$SRR" --split-files --gzip --gzip -O "$OUTDIR"
     

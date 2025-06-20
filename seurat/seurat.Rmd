@@ -342,7 +342,7 @@ top_3 <- markers_all %>% filter(cluster == 3) %>% top_n(15, avg_log2FC) %>% pull
 
 # Overlap bekijken tussen cluster 2 en 3
 overlap <- intersect(top_2, top_3)
-print(overlap)
+print(overlap) 
 ```
 
 Er is geen overlap gevonden tussen de top 15 marker-genen van cluster 2 en 3, wat suggereert dat deze clusters duidelijke verschillende expressieprofielen hebben.

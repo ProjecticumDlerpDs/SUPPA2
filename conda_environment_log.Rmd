@@ -83,6 +83,8 @@ Als je klaar bent met werken, kun je de omgeving netjes afsluiten met:
 conda deactivate
 ```
 
+**Tip:** Vergeet niet om de instructies in de README aan te passen. 
+
 ### Werken met Conda in scripts vs. RMarkdown
 Wanneer je gebruik maakt van een Conda-omgeving is het belangrijk om te weten wanneer en waar je de omgeving moet activeren. 
 
@@ -99,3 +101,5 @@ Zo zorg je ervoor dat alle commando's die volgen, binnen de juiste Conda-omgevin
 
 ## Veilig en bewust werken met Conda-omgevingen
 Conda-omgevingen helpen bij het veilig en bewust werken doordat ze het beheer van software en dependencies voor meerdere programmeertalen, zoals R en Python, mogelijk maken. Door deze omgevingen te gebruiken, wordt het eenvoudiger om analyses betrouwbaar te herhalen en het project overzichtelijk te houden, wat belangrijk is voor de kwaliteit en veiligheid van het onderzoek. De geisoleerde omgevingen zorgen ervoor dat software in het ene project niet zomaar invloed kan hebben op een ander project. Daarnaast maakt Conda het mogelijk om softwareversies gecontroleerd te beheren en omgevingen snel te herstellen bij problemen, doordat je met een environment.yml-bestand previes vastlegt welke pakketten en versies nodig zijn. Hierdoor kan een omgeving eenvoudig opnieuw worden opgebouwd op een andere computer of na een update.
+
+
