@@ -26,4 +26,5 @@ raw_data/*
 seurat/*.pdf
 
 seurat/seurat_filtered.rds
+seurat/data/seurat_filtered.rds
 
