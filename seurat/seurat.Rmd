@@ -395,4 +395,7 @@ Kortom, deze analyse beantwoord de eerste deelvraag:
 
 De workflow met SCTransform normalisatie, gerichte filtering en clustering levert celgroepen op die inhoudelijk geschikt zijn voor splicinganalyse. Na export en conversie vormt deze output een bruikbare basis voor verdere verwerking met SUPPA2. 
 
+```{r save-rds}
+saveRDS(seurat.filtered, "seurat_filtered.rds")
+```
 

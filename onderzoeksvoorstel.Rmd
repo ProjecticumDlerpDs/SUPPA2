@@ -1,0 +1,81 @@
+---
+title: "Onderzoeksvoorstel"
+author: "Jalisa van der Zeeuw"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, results = 'hide')
+library(Seurat)
+library(ggplot2)
+library(cowplot)
+```
+
+
+### Inleiding
+Het identificeren van zeldzame celtypen blijft belangrijk, omdat deze bijzondere cellen vaak nieuwe functies vervullen in weefselhomeostase, ziekteprogressie, of ontwikkeling. Hieronder beschrijf ik een plan om potentiële zeldzame celtypes op te sporen met als doel om deze cellen te onderscheiden en onderzoeken met methoden zoals SUPPA2, gecombineerd met aanvullende technieken als FACS, pseudo-bulk analyse en FLAIR.
+
+### Plan voor onderzoek naar zeldzame celtypen met SUPPA2
+
+**1.	Identificatie van zeldzame clusters in Seurat**
+
+Kies kleine clusters die unieke expressieprofielen vertonen.
+
+**2.	Verrijking van zeldzame celtypen met FACS**
+
+Hiervoor worden het aantal cellen van dit zeldzame type, dat je voor verdere analyse nodig hebt, vergroot.
+
+**3.	Verzamelen van voldoende cellen voor sequencing**
+
+Dit kan door meerdere samples te gebruiken of als het qua tijd mogelijk is de cellen kweken.
+
+**4.	Genereren van pseudo-bult data per zeldzaam celtype**
+
+**5.	Uitvoeren van SUPPA2 analyse**
+
+**6.	Overweeg long-read sequencing voor splicing-analyse**
+
+### Methodologische overwegingen voor splicinganalyse in zeldzame celtypen
+
+SUPPA2 is niet ontworpen voor short-read data dus er moet wel een andere tool worden gekozen, zoals FLAIR (full-length alternative isoform analysos of RNA). FLAIR detecteerd en kwantificeert isoformen uit long-read data en kan nieuwe exon combinaties identificeren zonder afhaneklijk te zijn van een bestaande annotatie.
+
+Door SUPPA2 én FLAIR te combineren krijg je een meer compleet inzicht. SUPPA2 geeft kwantitatieve verschillen in bekende events, FLAIR vult dat aan met nieuwe splice-varianten die je anders over het hoofd zou zien. 
+Ook kun je nieuwe splicing-events die je met FLAIR hebt ontdekt gebruiken om je bestaande referentie annotatie (GTF-bestand) uit te breiden. Vervolgs kun je dan weer SUPPA2 gebruiken om ook deze nieuwe events kwantitatief te analyseren over je clusters of celtypes, inclusief die zeldzame cellen. 
+
+### Selectie van cluster(s) voor verdere analyse
+
+Hieronder zie je twee UMAPs : links de originele clustering met resolutie 0.5 en rechts een nieuwe clustering waarbij de resolutie is aangepast naar 1.5. Een hogere resolutie resulteert in meer en kleinere clusters, waardoor ook zeldzame celtypen beter zichtbaar kunnen worden als aparte clusters. Dit maakt het mogelijk om potentiele zeldzame celpopulaties te identificeren en verder de analyseren.
+
+```{r prepare-data}
+# laat bestaande seurat-object
+seurat.filtered <- readRDS("~/Desktop/DesktopJalisa/Rstudio/suppa2/seurat/data/seurat_filtered.rds")
+#originele clustering met resolutie 0.5
+seurat.original <- seurat.filtered
+seurat.original <- FindNeighbors(seurat.original, dims = 1:8)
+seurat.original <- FindClusters(seurat.original, resolution = 0.5)
+seurat.original <- RunUMAP(seurat.original, dims = 1:8)
+```
+
+```{r new-clustering}
+# nieuwe clustering met hoge resolutie (1.5)
+seurat.new <- seurat.filtered
+seurat.new <- FindNeighbors(seurat.new, dims = 1:8)
+seurat.new <- FindClusters(seurat.new, resolution = 1.5)
+seurat.new <- RunUMAP(seurat.new, dims = 1:8)
+```
+
+```{r vergelijk-umaps, fig.width=12, fig.height=6}
+p1 <- DimPlot(seurat.original, reduction = "umap", label = TRUE) + ggtitle("Originele clustering")
+p2 <- DimPlot(seurat.new, reduction = "umap", label = TRUE) + ggtitle("Nieuwe clustering (resolutie aangepast)")
+
+plot_grid(p1, p2, ncol = 2)
+```
+
+
+```{r aantal-cellen-cluster20}
+# Aantal cellen in cluster 20 in seurat.new
+length(which(Idents(seurat.new) == "20"))
+```
+
+Op de rechter UMAP is een nieuw, klein cluster (cluster 20) ontstaan dat in de originele clustering wel te zien was, maar nog niet apart werd benoemd. Cluster 20 ligt redelijk los van de andere clusters en bevat slechts 21 cellen, wat het een interessante cluster maakt voor verdere analyse.
