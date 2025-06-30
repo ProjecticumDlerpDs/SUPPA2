@@ -25,5 +25,5 @@ raw_data/*
 # eventueel losse exports of figuren in seurat/
 seurat/*.pdf
 
-
+data/seurat_filtered.rds
 
