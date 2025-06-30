@@ -4,6 +4,8 @@ seurat.filtered <- FindClusters(seurat.filtered, resolution = 0.5)
 seurat.filtered <- RunUMAP(seurat.filtered, dims = 1:8)
 DimPlot(seurat.filtered, reduction = "umap", label = TRUE)
 
+seurat.original <- seurat.filtered
+
 # nieuwe clustering met een andere resolutie, in een nieuw object
 seurat.new <- seurat.filtered
 
