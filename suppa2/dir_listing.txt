@@ -1,0 +1,95 @@
+total 38648
+drwxr-xr-x@ 10 jalisavanderzeeuw  staff       320 Jul  1 22:41 data
+-rw-r--r--@  1 jalisavanderzeeuw  staff         0 Jul  1 22:43 dir_listing.txt
+-rw-r--r--@  1 jalisavanderzeeuw  staff         0 Jul  1 21:52 ensembl_hg19.events.ioe
+-rw-r--r--@  1 jalisavanderzeeuw  staff       149 Jun 30 18:06 header.tex
+-rw-r--r--@  1 jalisavanderzeeuw  staff   3987478 Jul  1 20:59 iso_tpm_formatted.txt
+-rw-r--r--@  1 jalisavanderzeeuw  staff  15739673 Jul  1 16:25 iso_tpm.txt
+drwxr-xr-x@  2 jalisavanderzeeuw  staff        64 May 30 12:14 output
+drwxr-xr-x@  4 jalisavanderzeeuw  staff       128 Jul  1 22:36 scripts
+drwxr-xr-x@  3 jalisavanderzeeuw  staff        96 Jul  1 21:09 SRR1513329
+-rw-r--r--@  1 jalisavanderzeeuw  staff     39043 Jul  1 21:12 suppa2_tutorial.pdf
+-rw-r--r--@  1 jalisavanderzeeuw  staff      9725 Jul  1 21:48 suppa2_tutorial.Rmd
+
+./data:
+total 30215560
+drwxr-xr-x@ 17 jalisavanderzeeuw  staff         544 Jun 30 23:58 Ensembl_hg19_salmon_index
+-rw-r--r--@  1 jalisavanderzeeuw  staff         693 Jul  1 20:56 format_Ensembl_ids.R
+-rwx------@  1 jalisavanderzeeuw  staff   335303613 Jun 30 23:11 hg19_EnsenmblGenes_sequence_ensenmbl.fasta
+drwxr-xr-x@  5 jalisavanderzeeuw  staff         160 Jul  1 14:19 SRR1513329
+-rw-r--r--@  1 jalisavanderzeeuw  staff  7567527178 Jul  1 14:43 SRR1513329_1.fastq
+-rw-r--r--@  1 jalisavanderzeeuw  staff  7567527178 Jul  1 14:43 SRR1513329_2.fastq
+drwxr-xr-x@  8 jalisavanderzeeuw  staff         256 Jul  1 22:41 SRR1513329_quant_output
+
+./data/Ensembl_hg19_salmon_index:
+total 1347520
+-rw-r--r--@ 1 jalisavanderzeeuw  staff     802636 Jun 30 23:51 complete_ref_lens.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff   63682959 Jun 30 23:52 ctable.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff    3357168 Jun 30 23:52 ctg_offsets.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff    2086536 Jun 30 23:51 duplicate_clusters.tsv
+-rw-r--r--@ 1 jalisavanderzeeuw  staff       1022 Jun 30 23:52 info.json
+-rw-r--r--@ 1 jalisavanderzeeuw  staff   76697924 Jun 30 23:52 mphf.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff  409855288 Jun 30 23:52 pos.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff        496 Jun 30 23:52 pre_indexing.log
+-rw-r--r--@ 1 jalisavanderzeeuw  staff   19016584 Jun 30 23:52 rank.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff      47510 Jun 30 23:52 ref_indexing.log
+-rw-r--r--@ 1 jalisavanderzeeuw  staff    1604864 Jun 30 23:52 refAccumLengths.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff     802636 Jun 30 23:52 reflengths.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff   73910560 Jun 30 23:52 refseq.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff   38033136 Jun 30 23:52 seq.bin
+-rw-r--r--@ 1 jalisavanderzeeuw  staff        127 Jun 30 23:52 versionInfo.json
+
+./data/SRR1513329:
+total 0
+drwxr-xr-x@ 2 jalisavanderzeeuw  staff  64 Jul  1 14:01 aux_info
+drwxr-xr-x@ 2 jalisavanderzeeuw  staff  64 Jul  1 14:01 libParams
+drwxr-xr-x@ 3 jalisavanderzeeuw  staff  96 Jul  1 14:02 logs
+
+./data/SRR1513329/aux_info:
+total 0
+
+./data/SRR1513329/libParams:
+total 0
+
+./data/SRR1513329/logs:
+total 8
+-rw-r--r--@ 1 jalisavanderzeeuw  staff  760 Jul  1 14:01 salmon_quant.log
+
+./data/SRR1513329_quant_output:
+total 38168
+drwxr-xr-x@ 10 jalisavanderzeeuw  staff       320 Jul  1 15:34 aux_info
+-rw-r--r--@  1 jalisavanderzeeuw  staff       280 Jul  1 15:33 cmd_info.json
+-rw-r--r--@  1 jalisavanderzeeuw  staff       550 Jul  1 15:33 lib_format_counts.json
+drwxr-xr-x@  3 jalisavanderzeeuw  staff        96 Jul  1 15:34 libParams
+drwxr-xr-x@  3 jalisavanderzeeuw  staff        96 Jul  1 21:23 logs
+-rw-r--r--@  1 jalisavanderzeeuw  staff  19532789 Jul  1 15:33 quant.sf
+
+./data/SRR1513329_quant_output/aux_info:
+total 1936
+-rw-r--r--@ 1 jalisavanderzeeuw  staff  958949 Jul  1 15:33 ambig_info.tsv
+-rw-r--r--@ 1 jalisavanderzeeuw  staff     248 Jul  1 15:33 exp_gc.gz
+-rw-r--r--@ 1 jalisavanderzeeuw  staff      89 Jul  1 15:33 expected_bias.gz
+-rw-r--r--@ 1 jalisavanderzeeuw  staff     571 Jul  1 15:33 fld.gz
+-rw-r--r--@ 1 jalisavanderzeeuw  staff    1849 Jul  1 15:33 meta_info.json
+-rw-r--r--@ 1 jalisavanderzeeuw  staff     227 Jul  1 15:33 obs_gc.gz
+-rw-r--r--@ 1 jalisavanderzeeuw  staff      54 Jul  1 15:33 observed_bias_3p.gz
+-rw-r--r--@ 1 jalisavanderzeeuw  staff      54 Jul  1 15:33 observed_bias.gz
+
+./data/SRR1513329_quant_output/libParams:
+total 24
+-rw-r--r--@ 1 jalisavanderzeeuw  staff  11706 Jul  1 15:33 flenDist.txt
+
+./data/SRR1513329_quant_output/logs:
+total 0
+-rw-r--r--@ 1 jalisavanderzeeuw  staff  0 Jul  1 21:11 salmon_quant.log
+
+./output:
+total 0
+
+./scripts:
+total 8
+-rwxr-xr-x@ 1 jalisavanderzeeuw  staff  1468 Jun 16 15:10 run_download_fastq.sh
+
+./SRR1513329:
+total 5187328
+-rw-r--r--@ 1 jalisavanderzeeuw  staff  2655910554 Jul  1 21:09 SRR1513329.sra

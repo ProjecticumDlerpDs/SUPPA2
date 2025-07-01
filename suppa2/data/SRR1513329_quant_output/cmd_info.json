@@ -1,0 +1,11 @@
+{
+    "salmon_version": "1.10.3",
+    "index": "data/Ensembl_hg19_salmon_index",
+    "libType": "ISF",
+    "gcBias": [],
+    "mates1": "SRR1513329_1.fastq",
+    "mates2": "SRR1513329_2.fastq",
+    "threads": "4",
+    "output": "SRR1513329_quant_output",
+    "auxDir": "aux_info"
+}

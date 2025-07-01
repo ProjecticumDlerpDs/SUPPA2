@@ -1,0 +1,160 @@
+---
+title: "suppa2_tutorial"
+author: "Jalisa van der Zeeuw"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    number_sections: true
+    latex_engine: xelatex
+    includes:
+      in_header: header.tex
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+use_condaenv("suppa2", required = TRUE) 
+knitr::opts_chunk$set(echo = FALSE, results = 'hide', message = FALSE, warning = FALSE)
+```
+
+# Inleiding
+In deze RMarkdown werk ik de SUPPA2-tutorial uit met als doel vertrouwd te raken met de werking van de tool SUPPA2 voor de analyse van alternatieve splicing (AS). SUPPA2 is een softwarepakket dat splicing events identificeert en kwantificeert aan de hand van zogeheten Percent Spliced-In (PSI) waarden. Door de PSI-waarden tussen condities of celclusters te vergelijken, kunnen verschillen in splicingpatronen zichtbaar worden gemaakt die mogelijk biologische relevantie hebben.
+
+Deze tutorial is gebaseerd op de dataset van [Best et al. (2015)](https://www.nature.com/articles/ncomms5760), waarin RNA-sequencingdata zijn verkregen van MDA-MB-231 cellen na knockdown van de splicing-gerelateerde eiwitten Tra2α en Tra2β, met controlegroepen en drie replicaten per conditie [(GSE59335)](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE59335). Deze eiwitten zijn betrokken bij de regulatie van alternatieve splicing, en de dataset biedt een geschikt uitgangspunt om SUPPA2 te leren gebruiken. De originele tutorial en de onderliggende software worden beschreven in de publicatie van [Trincado et al. (2018)](https://www.ncbi.nlm.nih.gov/pubmed/29571299).
+
+Hoewel deze oefening gebruikmaakt van bulk RNA-seq data van een bestaande dataset, is mijn uiteindelijke doel om SUPPA2 toe te passen op geclusterde single-cell VASA-seq data uit mijn eigen project. Daarom richt deze analyse zich op het begrijpen van de vereiste input, het interpreteren van de output, en het voorbereiden van het gebruik van SUPPA2 op een eigen dataset.
+
+Aan het einde van deze tutorial wil ik antwoord kunnen geven op de volgende deelvragen:
+
+- *Hoe werkt SUPPA2, welke input is vereist en hoe kan het worden toegepast op geclusterde VASA-seq-data?*
+
+- *Hoe kunnen de PSI-waarden die SUPPA2 genereert worden geinterpreteerd en gevisualiseerd om verschillen in alternatieve splicing tussen celclusters te analyseren?*
+
+De biologische interpretatie van splicingverschillen volgt in een latere analysefase met behulp van visualisaties in R (ggplot).
+
+# Transcriptquantificatie
+
+SUPPA2 bepaalt de inclusieniveaus van alternatieve splicing gebeurtenissen door gebruik te maken van transcript-kwantificatie. Er zijn verschillende manieren om isoformen te kwantificeren, zoals counts, TMM en FPKM, maar het wordt sterk aanbevolen om TPM (Transcripts Per Million) te gebruiken. TPM normaliseert eerst voor genlengte en daarna voor sequencingdiepte, waardoor directe vergelijkingen tussen samples mogelijk zijn.
+
+Er bestaan diverse tools voor transcript-kwantificatie, elk met hun eigen voor- en nadelen. In deze tutorial wordt aanbevolen om gebruik te maken van Salmon, een snelle methode die ook extra functies biedt, zals:
+
+- **GC bias correctie** compenseert voor vertekening in sequencing veroorzaakt door verschillen in het GC-gehalte van fragmenten, wat leidt tot nauwkeurige kwantificaties.
+
+- **Bootstrapping** is een methode om de onzekerheid in kwantificaties te schatten door herhaalde steekproeven uit de data te nemem, zodat de betrouwbaarheid van de resultaten beter beoordeeld kan worden xxxxxxxxxxxxx
+
+De commando's die in deze tutorial volgen, zijn afgestemd op het gebruik van Salmon.
+
+## Index
+
+Voordat Salmon gebruikt kan worden voor transcriptkwantificatie, moet eerst een index worden aangemaakt. Deze index is een soort "zoekstructuur" waarmee Salmon snel reads kan vergelijken met bekende transcriptsequenties.
+
+*Let op:*
+De index moet worden aangemaakt op basis van het transcriptoom (alle bekende transcriptvarianten), niet op het genoom. Een veelgemaakte fout is om een genoom-FASTA te gebruiken, wat leidt tot hoge rekentijd en fouten. 
+
+Er bestaan verschillende databases die transcriptannotaties aanbieden, waaronder bijvoorbeeld: Ensembl, Gencode en RefSeq. Elke annotatie heeft verschillende versies en details. In deze tutorial wordt gebruik gemaakt van de [Ensemble hg19 transcriptannotatie](https://github.com/comprna/SUPPA_supplementary_data/blob/master/annotation/hg19_EnsenmblGenes_sequence_ensenmbl.fasta.gz).
+
+```{bash, index_genereren, eval=FALSE}
+# salmon index: maakt een index aan van het transcriptome 
+# -t: geeft het bestand met de transcriptome sequenties (.fasta)
+# -i: geeft de map waarin de index wordt opgeslagen
+if [ ! -d "data/Ensembl_hg19_salmon_index" ]; then
+  salmon index -t data/hg19_EnsenmblGenes_sequence_ensenmbl.fasta -i data/Ensembl_hg19_salmon_index
+else
+  echo "Index bestaat al, wordt niet opnieuw aangemaakt."
+fi
+```
+## Quantification (met Salmon)
+
+Nu de index is aangemaakt, kan worden gestart met de transcriptkwantificatie. Hiervoor gebruiken we Salmon in de zogenoemde quasi-mapping-based mode. In deze modus worden reads snel en efficient gemapt op transcriptsequenties zonder volledige alignments, wat rekentijd bespaart. Onze ruwe RNA-seq data zijn opgeslagen in FASTQ-bestanden, en Salmon kan hier direct mee werken. In de tutorial werd ervan uitgegaan dat deze FASTQ-bestanden al beschikbaar zijn, maar dat was niet zo. Eerst zijn de SRA-bestanden gedownload via `prefetch` waarna deze zijn omgezet naar FASTQ-bestanden met `fasterq-dump`. 
+
+Bij het omzetten van de gedownloade SRA-bestand(en) naar FASTQ-bestanden geeft het commando informatie over het aantal "spots" en reads. Dit kan helpen om te controleren of de omzetting goed is verlopen.
+
+- *spot read*: het aantal oorspronkelijke sequencing spots (meestal het aantal fragmenten dat is gelezen)
+
+- *reads read*: het totaal aantal individuele reads dat is gelezen 
+
+- *reads written*: het aantal reads dat succesvol naar FASTQ-bestanden is weggeschreven
+
+In dit voorbeeld:
+
+spots read      : 22,000,532  
+reads read      : 44,001,064  
+reads written   : 44,001,064  
+
+Zien we dat het aantal reads gelijk is aan het aantal geschreven reads, wat erop wijst dat de omzetting succesvol is afgerond.
+
+```{bash, eval=FALSE}
+#FASTQ-bestanden van SRA downloaden
+prefetch SRR1513329
+```
+
+```{bash, eval=FALSE}
+#.sra-bestand omzetten naar FASTQ
+fasterq-dump SRR1513329
+```
+
+Tijdens de kwantificatie vergelijkt Salmon de reads uit de FASTQ-bestanden met de transcriptindex en bepaalt zo de expressie van de verschillende transcriptvarianten. 
+
+```{bash, eval=FALSE}
+# Controleer of de benodigde FASTQ-bestanden bestaan
+if [ -f SRR1513329_1.fastq ] && [ -f SRR1513329_2.fastq ]; then
+  echo "FASTQ bestanden gevonden, start kwantificatie met Salmon..."
+  salmon quant \
+    -i data/Ensembl_hg19_salmon_index \
+    -l ISF \
+    --gcBias \
+    -1 SRR1513329_1.fastq \
+    -2 SRR1513329_2.fastq \
+    -p 4 \
+    -o SRR1513329_quant_output
+else
+  echo "ERROR: FASTQ bestanden SRR1513329_1.fastq en/of SRR1513329_2.fastq ontbreken."
+fi
+```
+
+Nu Salmon de expressieniveaus per transcript heeft bepaald, willen we de TPM-waarden van de isoformen extraheren. Deze waarden zijn te vinden in het quant.sf-bestand dat Salmon als output genereert per sample. SUPPA2 bevat een Python-script genaamd `multipleFieldSelection.py`, waarmee specifieke kolomen uit meerdere `quant.sf-bestanden` kunnen worden gehaald. 
+
+In dit geval wordt kolom 4 (de TPM-waarde) geselecteerd, en gebruiken we de transcript-ID (kolom 1) als sleutel.
+
+```{bash, eval=FALSE}
+# Extract TPM-waarden met SUPPA2 script
+# -i: alle quant.sf bestanden in map
+# -k 1: gebruik kolom 1 (transcript_id) als sleutel
+# -f 4: gebruik kolom 4 (TPM)
+# -o: outputbestand
+python3 ~/SUPPA/multipleFieldSelection.py -i SRR1513329_quant_output/quant.sf -k 1 -f 4 -o iso_tpm.txt
+```
+Na het uitvoeren van het `multipeFieldSelection.py` script worden de TPM-waarden van alle isoformen geextraheerd en verzameld in een overzichtelijk tekstbestand (`iso_tpm.txt`). Hierbij fungeert de transcript-ID als unieke sleutel om de juiste expressiewaarden te koppelen aan elke isoform. Dit bestand is essentieel voor verdere analyse van transcript-quantificatie in SUPPA2. 
+
+Voor een correcte koppeling tussen de TPM-waarden `(iso_tpm.txt)` en de transcriptannotaties in de GTF, moeten de transcript-ID's in beide bestanden exact overeenkomen. Omdat Ensemmbl-transcript-ID's soms versienummers bevatten, worden deze met een R-script opgeschoond. Dit script verwijdert dergelijke toevoegingen, zodat SUPPA2 de juiste matches kan maken tijdens de analyse van splicing-events.
+
+```{bash, eval=FALSE}
+# format transcript-IDs zodat ze matchen met de GTF
+Rscript ~/Desktop/DesktopJalisa/Rstudio/suppa2/suppa2/scripts/format_Ensembl_ids.R iso_tpm.txt
+```
+
+# Event calculation
+
+We gaan nu de splicing events identifiveren en de coordinaten daarvan extraheren uit de annotatie. Hiervoor gebruiken we het `generateEvents` commando van SUPPA2, dat per event-type een `.ioe` bestand aanmaakt.
+
+In deze analyse bekijken we de volgende event-types:
+
+- SE: Skipped Exon
+- SS: Alternative 5' of 3' Splice Site
+- MX: Mutually Exclusive Exons
+- RI: Retained Intron
+- FL: Full Length
+
+```{bash}
+# genereer ioe-bestanden met SUPPA2, gebruikmakend van het geformatteerde GTF-bestand
+python3 ~/SUPPA/suppa.py generateEvents -i annotation/Homo_sapiens.GRCh37.75.formatted.gtf -o ensembl_hg19.events -e SE SS MX RI FL -f ioe
+
+# Voeg alle gegenereerde ioe-bestanden samen in één bestand
+awk '
+    FNR==1 && NR!=1 { while (/^<header>/) getline; } # Sla headers van tweede en volgende bestanden over
+    1 {print}                                      # Print alle regels
+' *.ioe > ensembl_hg19.events.ioe
+```
+
+
+
